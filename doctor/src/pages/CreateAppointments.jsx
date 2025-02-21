@@ -1,9 +1,11 @@
+"use client";
+
 import React, { useState } from "react";
 import axios from "axios";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { DatePickerWithRange } from "@/components/ui/datePickerCustom";
+import DatePickerWithRange from "@/components/ui/datePickerCustom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,21 +18,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/sonner"
+import { toast } from "sonner";
 
 const formSchema = z.object({
-  dailyWorkingStartTime: z.string().regex(
-    /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/,
-    {
-      message: "Invalid time format. Must be HH:mm (e.g., 09:00)",
-    }
-  ),
-  dailyWorkingEndTime: z.string().regex(
-    /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/,
-    {
-      message: "Invalid time format. Must be HH:mm (e.g., 17:30)",
-    }
-  ),
+  dailyWorkingStartTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Invalid time format. Must be HH:mm (e.g., 09:00)",
+  }),
+  dailyWorkingEndTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Invalid time format. Must be HH:mm (e.g., 17:30)",
+  }),
   numberOfAppointments: z.number().int().positive({
     message: "Number of appointments must be a positive integer.",
   }),
@@ -60,8 +56,8 @@ const CreateAppointments = () => {
       numberOfAppointments: 10,
       averageAppointmentTime: 30,
       dateRange: {
-        from: new Date(),
-        to: new Date(),
+        from: null,
+        to: null,
       },
     },
   });
@@ -73,12 +69,7 @@ const CreateAppointments = () => {
       const endDate = values.dateRange?.to;
 
       if (!startDate || !endDate) {
-        toast({
-          variant: "destructive",
-          title: "Error.",
-          description: "Please select a valid date range.",
-          action: "Close",
-        });
+        toast.error("Please select a valid date range.");
         setIsSubmitting(false);
         return;
       }
@@ -101,29 +92,14 @@ const CreateAppointments = () => {
       );
 
       if (response.data.success) {
-        toast({
-          title: "Success",
-          description: response.data.message,
-          action: "Close",
-        });
+        toast.success(response.data.message);
         form.reset();
       } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description:
-            response.data.message || "Failed to create appointments.",
-          action: "Close",
-        });
+        toast.error(response.data.message || "Failed to create appointments.");
       }
     } catch (error) {
       console.error("Error creating appointments:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.response?.data?.message || "Internal server error.",
-        action: "Close",
-      });
+      toast.error(error.response?.data?.message || "Internal server error.");
     } finally {
       setIsSubmitting(false);
     }
@@ -167,6 +143,7 @@ const CreateAppointments = () => {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="dailyWorkingEndTime"
@@ -207,6 +184,7 @@ const CreateAppointments = () => {
                 </FormItem>
               )}
             />
+
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Creating..." : "Create Appointments"}
             </Button>
