@@ -10,8 +10,7 @@ import {
 
 const router = express.Router();
 
-// Base path: /api/appointment
-router.post('/schedule', authDoctor, createAppointment);          // Create new appointment slots
+router.post('/create', authDoctor, createAppointment);          // Create an available slot
 router.get('/available', authDoctor, getAvailableAppointments);   // Get available slots
 router.get('/confirmed', authDoctor, getConfirmedAppointments);   // Get confirmed appointments
 router.delete('/:id', authDoctor, deleteUnbookedAppointment);     // Delete an available slot

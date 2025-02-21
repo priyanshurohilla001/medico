@@ -29,7 +29,7 @@ import {
 import { useState, useEffect } from "react"
 import axios from "axios"
 
-const ITEMS_PER_PAGE = 5
+const ITEMS_PER_PAGE = 10
 
 export default function Appointments() {
   const [currentPage, setCurrentPage] = useState(1)
@@ -41,13 +41,14 @@ export default function Appointments() {
     confirmed: { total: 0, pages: 0 },
     available: { total: 0, pages: 0 }
   })
+  const [actionType, setActionType] = useState('')
   const token = localStorage.getItem("token")
 
   const fetchAppointments = async (type) => {
     setLoading(true)
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/api/appointment/${type}`,  // Updated URL
+        `${import.meta.env.VITE_SERVER_URL}/api/appointment/${type}`,
         {
           params: { page: currentPage, limit: ITEMS_PER_PAGE },
           headers: { Authorization: `Bearer ${token}` }
@@ -62,41 +63,41 @@ export default function Appointments() {
         [type]: response.data.pagination
       }))
     } catch (error) {
-      console.error(`Error fetching ${type} appointments:`, error)
+      alert(`Error fetching ${type} appointments. Please try again.`)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchAppointments('confirmed')
-    fetchAppointments('available')
+    if (token) {
+      fetchAppointments('confirmed')
+      fetchAppointments('available')
+    }
   }, [currentPage, token])
 
-  const handleCancel = async (appointment) => {
+  const handleAction = async () => {
     try {
-      await axios.put(
-        `${import.meta.env.VITE_SERVER_URL}/api/appointment/${appointment._id}/cancel`,  // Updated URL
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      fetchAppointments('confirmed')
-      setOpenDialog(false)
-    } catch (error) {
-      console.error('Error cancelling appointment:', error)
-    }
-  }
+      if (!selectedAppointment) return
 
-  const handleDeleteSlot = async (appointment) => {
-    try {
-      await axios.delete(
-        `${import.meta.env.VITE_SERVER_URL}/api/appointment/${appointment._id}`,  // Updated URL
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      fetchAppointments('available')
+      if (actionType === 'cancel') {
+        await axios.put(
+          `${import.meta.env.VITE_SERVER_URL}/api/appointment/${selectedAppointment._id}/cancel`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        fetchAppointments('confirmed')
+      } else if (actionType === 'delete') {
+        await axios.delete(
+          `${import.meta.env.VITE_SERVER_URL}/api/appointment/${selectedAppointment._id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        fetchAppointments('available')
+      }
       setOpenDialog(false)
+      setSelectedAppointment(null)
     } catch (error) {
-      console.error('Error deleting slot:', error)
+      alert('Error processing your request. Please try again.')
     }
   }
 
@@ -155,29 +156,17 @@ export default function Appointments() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {type === 'confirmed' ? (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setOpenDialog(true);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setOpenDialog(true);
-                        }}
-                      >
-                        Delete Slot
-                      </Button>
-                    )}
+                    <Button
+                      variant={type === 'confirmed' ? "destructive" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedAppointment(appointment)
+                        setActionType(type === 'confirmed' ? 'cancel' : 'delete')
+                        setOpenDialog(true)
+                      }}
+                    >
+                      {type === 'confirmed' ? 'Cancel' : 'Delete Slot'}
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -247,21 +236,20 @@ export default function Appointments() {
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Appointment</DialogTitle>
+            <DialogTitle>
+              {actionType === 'cancel' ? 'Cancel Appointment' : 'Delete Slot'}
+            </DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this appointment? This action cannot
-              be undone.
+              Are you sure you want to {actionType === 'cancel' ? 'cancel this appointment' : 'delete this slot'}? 
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setOpenDialog(false)}>
               No, Keep it
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => handleCancel(selectedAppointment)}
-            >
-              Yes, Cancel it
+            <Button variant="destructive" onClick={handleAction}>
+              Yes, {actionType === 'cancel' ? 'Cancel it' : 'Delete it'}
             </Button>
           </div>
         </DialogContent>
