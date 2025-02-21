@@ -7,10 +7,12 @@ import DoctorProfile from "@/components/DoctorProfile"
 import EditProfile from "@/components/EditProfile"
 import ChangePassword from "@/components/ChangePassword"
 import Appointments from "@/components/Appointments"
+import CreateAppointments from "@/pages/CreateAppointments"
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
   { icon: Calendar, label: "Appointments", id: "appointments" },
+  { icon: Calendar, label: "Create Appointments", id: "CreateAppointments" },
   { icon: UserCog, label: "Edit Profile", id: "edit-profile" },
   { icon: Key, label: "Change Password", id: "change-password" },
 ]
@@ -70,6 +72,8 @@ export default function Dashboard() {
         return <EditProfile profile={profile} />
       case "change-password":
         return <ChangePassword />
+      case "CreateAppointments":
+        return <CreateAppointments />
       default:
         return <DoctorProfile profile={profile} />
     }

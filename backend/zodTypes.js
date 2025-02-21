@@ -13,50 +13,23 @@ export const registerDoctorSchema = z.object({
 });
 
 
-export const scheduleSchema = z
-  .object({
-    workingStartTimestamp: z
-      .number({ required_error: 'Working start time is required' })
-      .int()
-      .nonnegative(),
-    workingEndTimestamp: z
-      .number({ required_error: 'Working end time is required' })
-      .int()
-      .nonnegative(),
-    numberOfAppointments: z
-      .number({ required_error: 'Number of appointments is required' })
-      .int()
-      .positive({ message: 'Number of appointments must be a positive integer' }),
-    averageAppointmentTime: z
-      .number({ required_error: 'Average appointment time is required' })
-      .int()
-      .positive({ message: 'Average appointment time must be a positive integer' }),
-    onlineConsultationPrice: z
-      .number({ required_error: 'Online consultation price is required' })
-      .nonnegative({ message: 'Online consultation price must be nonnegative' }),
-    physicalConsultationPrice: z
-      .number({ required_error: 'Physical consultation price is required' })
-      .nonnegative({ message: 'Physical consultation price must be nonnegative' }),
-    startDate: z
-      .number({ required_error: 'Start date is required' })
-      .int()
-      .nonnegative(),
-    endDate: z
-      .number({ required_error: 'End date is required' })
-      .int()
-      .nonnegative(),
-  })
-  .refine(
-    (data) => data.workingStartTimestamp < data.workingEndTimestamp,
-    {
-      message: 'Working start time must be before working end time',
-      path: ['workingStartTimestamp', 'workingEndTimestamp'],
-    }
-  )
-  .refine(
-    (data) => data.startDate <= data.endDate,
-    {
-      message: 'Start date must be less than or equal to end date',
-      path: ['startDate', 'endDate'],
-    }
-  );
+export const scheduleSchema = z.object({
+  dailyWorkingStartTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Invalid time format for working start time. Must be HH:mm (e.g., 09:00, 17:30)",
+  }),
+  dailyWorkingEndTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Invalid time format for working end time. Must be HH:mm (e.g., 09:00, 17:30)",
+  }),
+  numberOfAppointments: z.number().int().positive({
+    message: "Number of appointments must be a positive integer.",
+  }),
+  averageAppointmentTime: z.number().positive({
+    message: "Average appointment time must be a positive number (in minutes).",
+  }),
+  startDate: z.string().datetime({
+    message: "Start date must be a valid date and time in ISO format.",
+  }),
+  endDate: z.string().datetime({
+    message: "End date must be a valid date and time in ISO format.",
+  }),
+});

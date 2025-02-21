@@ -17,11 +17,11 @@ const appointmentSchema = new mongoose.Schema({
   appointmentType: {
     type: String,
     enum: ['online', 'physical'],
-    required: true,
+    default: null, 
   },
   price: {
     type: Number,
-    required: true,
+    default: null, 
   },
   patientId: {
     type: mongoose.Schema.Types.ObjectId,
