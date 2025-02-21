@@ -8,7 +8,13 @@ import { z } from "zod";
 import DatePickerWithRange from "@/components/ui/datePickerCustom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -19,30 +25,33 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { generateTimeOptions } from "@/utils/timeOptions";
+
+const timeOptions = generateTimeOptions();
 
 const formSchema = z.object({
-  dailyWorkingStartTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-    message: "Invalid time format. Must be HH:mm (e.g., 09:00)",
+  dailyWorkingStartTime: z.string().min(1, "Start time is required"),
+  dailyWorkingEndTime: z.string().min(1, "End time is required"),
+  numberOfAppointments: z.coerce
+    .number()
+    .int()
+    .positive("Number of appointments must be a positive integer.")
+    .max(50, "Maximum 50 appointments allowed per day"),
+  averageAppointmentTime: z.coerce
+    .number()
+    .positive("Average appointment time must be a positive number.")
+    .min(15, "Minimum appointment time is 15 minutes")
+    .max(180, "Maximum appointment time is 180 minutes"),
+  dateRange: z.object({
+    from: z.date({
+      required_error: "Start date is required.",
+    }),
+    to: z.date({
+      required_error: "End date is required.",
+    }),
+  }).refine((data) => data.from <= data.to, {
+    message: "End date cannot be before start date",
   }),
-  dailyWorkingEndTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-    message: "Invalid time format. Must be HH:mm (e.g., 17:30)",
-  }),
-  numberOfAppointments: z.number().int().positive({
-    message: "Number of appointments must be a positive integer.",
-  }),
-  averageAppointmentTime: z.number().positive({
-    message: "Average appointment time must be a positive number (minutes).",
-  }),
-  dateRange: z
-    .object({
-      from: z.date({
-        required_error: "Start date is required.",
-      }),
-      to: z.date({
-        required_error: "End date is required.",
-      }),
-    })
-    .required(),
 });
 
 const CreateAppointments = () => {
@@ -51,10 +60,10 @@ const CreateAppointments = () => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      dailyWorkingStartTime: "09:00",
-      dailyWorkingEndTime: "17:00",
-      numberOfAppointments: 10,
-      averageAppointmentTime: 30,
+      dailyWorkingStartTime: "10:00",
+      dailyWorkingEndTime: "16:00",
+      numberOfAppointments: 8,
+      averageAppointmentTime: 45,
       dateRange: {
         from: null,
         to: null,
@@ -74,32 +83,42 @@ const CreateAppointments = () => {
         return;
       }
 
-      const formattedStartDate = startDate.toISOString();
-      const formattedEndDate = endDate.toISOString();
-
       const payload = {
         dailyWorkingStartTime: values.dailyWorkingStartTime,
         dailyWorkingEndTime: values.dailyWorkingEndTime,
-        numberOfAppointments: values.numberOfAppointments,
-        averageAppointmentTime: values.averageAppointmentTime,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
+        numberOfAppointments: Number(values.numberOfAppointments),
+        averageAppointmentTime: Number(values.averageAppointmentTime),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
       };
 
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication token not found");
+        return;
+      }
+
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_VITE_SERVER_URL}/api/appointment/create`,
-        payload
+        `${import.meta.env.VITE_SERVER_URL}/api/appointment/create`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
       );
 
       if (response.data.success) {
-        toast.success(response.data.message);
+        toast.success(response.data.message || "Appointments created successfully");
         form.reset();
-      } else {
-        toast.error(response.data.message || "Failed to create appointments.");
       }
     } catch (error) {
       console.error("Error creating appointments:", error);
-      toast.error(error.response?.data?.message || "Internal server error.");
+      toast.error(
+        error.response?.data?.message || 
+        "Failed to create appointments. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -135,10 +154,24 @@ const CreateAppointments = () => {
                 name="dailyWorkingStartTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Start Time (HH:mm)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="time" placeholder="HH:mm" />
-                    </FormControl>
+                    <FormLabel>Start Time</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select start time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -149,15 +182,30 @@ const CreateAppointments = () => {
                 name="dailyWorkingEndTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>End Time (HH:mm)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="time" placeholder="HH:mm" />
-                    </FormControl>
+                    <FormLabel>End Time</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select end time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
             <FormField
               control={form.control}
               name="numberOfAppointments"
@@ -165,12 +213,20 @@ const CreateAppointments = () => {
                 <FormItem>
                   <FormLabel>Number of Appointments Per Day</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" placeholder="e.g., 10" />
+                    <Input
+                      {...field}
+                      type="number"
+                      min="1"
+                      max="50"
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      placeholder="e.g., 8"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="averageAppointmentTime"
@@ -178,7 +234,14 @@ const CreateAppointments = () => {
                 <FormItem>
                   <FormLabel>Average Appointment Time (minutes)</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" placeholder="e.g., 30" />
+                    <Input
+                      {...field}
+                      type="number"
+                      min="15"
+                      max="180"
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      placeholder="e.g., 45"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
