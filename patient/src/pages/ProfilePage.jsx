@@ -1,14 +1,15 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Card, CardContent } from "../components/ui/card";
 import PatientProfile from "../components/PatientProfile";
 import PatientEditProfile from "../components/PatientEditProfile";
 import PatientChangePassword from "../components/PatientChangePassword";
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -16,9 +17,7 @@ export default function ProfilePage() {
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_SERVER_URL}/api/patient/profile`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setProfile(response.data.data);
       } catch (error) {
@@ -31,51 +30,42 @@ export default function ProfilePage() {
     fetchProfile();
   }, [token]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {!(editing || changingPassword) && (
-        <>
-          <PatientProfile profile={profile} />
-          <div className="flex gap-4">
-            <button
-              className="px-4 py-2 bg-primary text-primary-foreground rounded"
-              onClick={() => setEditing(true)}
-            >
-              Edit Profile
-            </button>
-            <button
-              className="px-4 py-2 bg-secondary text-secondary-foreground rounded"
-              onClick={() => setChangingPassword(true)}
-            >
-              Change Password
-            </button>
-          </div>
-        </>
-      )}
+    <div className="container mx-auto py-8 max-w-3xl">
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="edit">Edit Profile</TabsTrigger>
+          <TabsTrigger value="password">Password</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profile">
+          <Card>
+            <CardContent className="pt-6">
+              <PatientProfile profile={profile} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {editing && (
-        <PatientEditProfile
-          profile={profile}
-          onUpdate={(updatedProfile) => {
-            setProfile(updatedProfile);
-            setEditing(false);
-          }}
-        />
-      )}
+        <TabsContent value="edit">
+          <PatientEditProfile 
+            profile={profile} 
+            onUpdate={(updatedProfile) => setProfile(updatedProfile)} 
+          />
+        </TabsContent>
 
-      {changingPassword && (
-        <>
+        <TabsContent value="password">
           <PatientChangePassword />
-          <button
-            className="px-4 py-2 bg-gray-300 rounded mt-4"
-            onClick={() => setChangingPassword(false)}
-          >
-            Back to Profile
-          </button>
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -24,26 +24,15 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-
-const specialties = [
-  "Cardiology",
-  "Dermatology",
-  "Endocrinology",
-  "Gastroenterology",
-  "Neurology",
-  "Oncology",
-  "Pediatrics",
-  "Psychiatry",
-  "Surgery",
-];
+import { SpecialtiesSelect } from "../components/SpecialtiesSelect"; 
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  specialties: z.array(z.string()).nonempty(
-    "Please select at least one specialty. Popular specialties in India include ENT, Cardiology, Orthopedics, Gynecology, Pediatrics, Dermatology, Neurology, Oncology, and Surgery."
-  ),
+  specialties: z.array(z.string()).min(1, { 
+    message: "Please select at least one specialty." 
+  }),
   qualifications: z.string().optional(),
   experience: z.string().optional().refine((value) => {
     if (!value) return true; 
@@ -164,37 +153,18 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-              {/* Specialties as checkboxes */}
               <FormField
                 control={form.control}
                 name="specialties"
-                render={({ field: { value, onChange } }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Specialties</FormLabel>
-                    <div className="flex flex-col space-y-2">
-                      {specialties.map((spec) => {
-                        const specValue = spec.toLowerCase();
-                        const isChecked = value.includes(specValue);
-                        return (
-                          <label key={spec} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              value={specValue}
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  onChange([...value, specValue]);
-                                } else {
-                                  onChange(value.filter((item) => item !== specValue));
-                                }
-                              }}
-                              className="h-4 w-4"
-                            />
-                            <span>{spec}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <FormControl>
+                      <SpecialtiesSelect
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

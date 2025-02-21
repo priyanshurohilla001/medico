@@ -1,33 +1,36 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { User, Phone, MapPin, Mail } from "lucide-react";
 
 export default function PatientProfile({ profile }) {
+  const profileItems = [
+    { icon: <User className="h-5 w-5" />, label: "Name", value: profile.name },
+    { icon: <Phone className="h-5 w-5" />, label: "Phone", value: profile.phone },
+    { icon: <MapPin className="h-5 w-5" />, label: "Address", value: profile.address },
+    { icon: <Mail className="h-5 w-5" />, label: "Email", value: profile.email }
+  ];
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+          <User className="h-12 w-12 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold">{profile.name}</h2>
+          <p className="text-muted-foreground">Patient</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 mt-6">
+        {profileItems.map((item, index) => (
+          <div key={index} className="flex items-center space-x-4 p-4 rounded-lg border">
+            {item.icon}
             <div>
-              <p className="text-sm font-medium text-gray-500">Name</p>
-              <p className="text-lg font-semibold">{profile.name}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Email</p>
-              <p className="text-lg font-semibold">{profile.email}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Age</p>
-              <p className="text-lg font-semibold">{profile.age}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Phone</p>
-              <p className="text-lg font-semibold">{profile.phone}</p>
+              <p className="text-sm text-muted-foreground">{item.label}</p>
+              <p className="font-medium">{item.value || "Not provided"}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     </div>
-  )
+  );
 }

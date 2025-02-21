@@ -140,7 +140,7 @@ export const changeDoctorPassword = async (req, res) => {
       });
     }
 
-    const doctor = await Doctor.findById(doctorId);
+    const doctor = await Doctor.findById(doctorId).select('+password');
     if (!doctor) {
       return res.status(404).json({
         success: false,
