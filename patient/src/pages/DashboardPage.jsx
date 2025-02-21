@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Outlet, useNavigate } from "react-router-dom"
+import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { LayoutDashboard, Calendar, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -12,7 +12,15 @@ const SIDEBAR_ITEMS = [
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [activePath, setActivePath] = useState("profile")
+
+  useEffect(() => {
+    const currentPath = location.pathname.split("/").pop()
+    if (!currentPath.startsWith("doctor/")) {
+      setActivePath(currentPath)
+    }
+  }, [location])
 
   const handleNavigation = (path) => {
     setActivePath(path)

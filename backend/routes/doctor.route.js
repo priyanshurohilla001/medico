@@ -1,9 +1,8 @@
 import express from 'express';
-import { registerDoctor, loginDoctor, updateDoctorProfile, changeDoctorPassword } from '../controllers/doctor.controller.js';
+import { registerDoctor, loginDoctor, updateDoctorProfile, changeDoctorPassword, searchDoctors, getDoctorById } from '../controllers/doctor.controller.js';
 import authDoctor from '../services/authDoctor.js';
 
 const router = express.Router();
-
 
 router.post('/register', registerDoctor);
 router.post('/login', loginDoctor);
@@ -12,5 +11,7 @@ router.patch('/change-password', authDoctor, changeDoctorPassword);
 router.get('/profile', authDoctor, (req, res) => {
   res.send(req.doctor);
 });
+router.get('/search', searchDoctors); 
+router.get('/:id', getDoctorById); // Add this new route
 
 export default router;

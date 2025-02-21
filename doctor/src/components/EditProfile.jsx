@@ -6,12 +6,17 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { SpecialtiesSelect } from "./SpecialtiesSelect"
 import { toast } from "sonner"
+import { IndianRupee } from "lucide-react"
 
 export default function EditProfile({ profile }) {  // Remove setProfile prop
   const [formData, setFormData] = useState({
     name: profile.name || "",
     specialties: profile.specialties || [],
     qualifications: profile.qualifications || "",
+    consultationFees: {
+      online: profile.consultationFees?.online || "",
+      physical: profile.consultationFees?.physical || "",
+    }
   })
   const [isLoading, setIsLoading] = useState(false)
 
@@ -55,7 +60,7 @@ export default function EditProfile({ profile }) {  // Remove setProfile prop
         <CardTitle>Edit Profile</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Name</label>
@@ -85,6 +90,63 @@ export default function EditProfile({ profile }) {  // Remove setProfile prop
                 onChange={(e) => setFormData(prev => ({ ...prev, qualifications: e.target.value }))}
                 className="min-h-[100px]"
               />
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-lg font-semibold">Consultation Fees</label>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <IndianRupee className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <label className="font-medium">Online Consultation</label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                    <Input
+                      type="number"
+                      value={formData.consultationFees.online}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        consultationFees: {
+                          ...prev.consultationFees,
+                          online: e.target.value
+                        }
+                      }))}
+                      className="pl-8"
+                      min="0"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <IndianRupee className="h-5 w-5 text-green-600" />
+                    </div>
+                    <label className="font-medium">Physical Consultation</label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                    <Input
+                      type="number"
+                      value={formData.consultationFees.physical}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        consultationFees: {
+                          ...prev.consultationFees,
+                          physical: e.target.value
+                        }
+                      }))}
+                      className="pl-8"
+                      min="0"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           

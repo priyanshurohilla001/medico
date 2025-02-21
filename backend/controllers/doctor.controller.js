@@ -105,15 +105,36 @@ export const updateDoctorProfile = async (req, res) => {
     const doctorId = req.doctor._id;
     const updateData = req.body;
 
+    // Validate and clean consultation fees
+    if (updateData.consultationFees) {
+      // Convert fees to numbers and ensure they are non-negative
+      const online = Number(updateData.consultationFees.online);
+      const physical = Number(updateData.consultationFees.physical);
+
+      updateData.consultationFees = {
+        online: isNaN(online) || online < 0 ? 0 : online,
+        physical: isNaN(physical) || physical < 0 ? 0 : physical
+      };
+    }
+
     if (updateData.password) delete updateData.password;
 
-    const updatedDoctor = await Doctor.findByIdAndUpdate(doctorId, updateData, { new: true });
+    const updatedDoctor = await Doctor.findByIdAndUpdate(
+      doctorId,
+      updateData,
+      { 
+        new: true,
+        select: '-password name email specialties qualifications experience age consultationFees createdAt'
+      }
+    );
+
     if (!updatedDoctor) {
       return res.status(404).json({
         success: false,
         message: 'Doctor not found',
       });
     }
+
     return res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
@@ -172,3 +193,85 @@ export const changeDoctorPassword = async (req, res) => {
     });
   }
 };
+
+export const searchDoctors = async (req, res) => {
+  try {
+    const { query, speciality } = req.query;
+    let searchCriteria = {};
+
+    if (query) {
+      searchCriteria.$or = [
+        { name: { $regex: query, $options: "i" } },
+        { specialties: { $regex: query, $options: "i" } }
+      ];
+    }
+
+    if (speciality) {
+      const specialtiesArray = speciality.split(",").filter(Boolean);
+      if (specialtiesArray.length) {
+        searchCriteria.specialties = { $in: specialtiesArray };
+      }
+    }
+
+    // Make sure to include consultation fees in the response
+    const doctors = await Doctor.find(searchCriteria)
+      .select("-password")
+      .select("name email specialties qualifications experience age consultationFees")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      doctors,
+    });
+  } catch (error) {
+    console.error("Error in searchDoctors:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+export const getDoctorById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Make sure to include consultation fees in the response
+    const doctor = await Doctor.findById(id)
+      .select('-password')
+      .select('name email specialties qualifications experience age consultationFees createdAt')
+      .lean();
+    
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found',
+      });
+    }
+
+    // Add default values for consultation fees if not set
+    if (!doctor.consultationFees) {
+      doctor.consultationFees = { online: 0, physical: 0 };
+    }
+
+    return res.status(200).json({
+      success: true,
+      doctor,
+    });
+  } catch (error) {
+    console.error('Error in getDoctorById:', error);
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid doctor ID',
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
