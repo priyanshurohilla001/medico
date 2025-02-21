@@ -34,6 +34,11 @@ export default function DatePickerWithRange({
       setDate(propDate);
     }
   }, [propDate]);
+
+  // Get tomorrow's date
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
  
   return (
     <div className={cn("grid gap-2", className)}>
@@ -66,10 +71,12 @@ export default function DatePickerWithRange({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={date?.from}
+            defaultMonth={tomorrow}
             selected={date}
             onSelect={handleSelect}
             numberOfMonths={2}
+            fromDate={tomorrow} // This disables all dates before tomorrow
+            disabled={(date) => date < tomorrow} // Additional safety check
           />
         </PopoverContent>
       </Popover>

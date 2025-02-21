@@ -3,6 +3,9 @@ import Appointment from '../models/appointment.model.js';
 import { scheduleSchema } from "../zodTypes.js";
 
 export async function createAppointment(req, res) {
+  console.log('Debug - Create Appointment Request Body:', req.body);
+  console.log('Debug - Doctor ID:', req.doctor._id);
+
   const result = scheduleSchema.safeParse(req.body);
   if (!result.success) {
     return res.status(400).json({ success: false, message: "Validation failed", errors: result.error.errors });
@@ -91,14 +94,203 @@ export async function createAppointment(req, res) {
   }
 
   try {
+    console.log('Debug - Generated Appointments:', appointments.length);
     await Appointment.insertMany(appointments);
+    console.log('Debug - Successfully inserted appointments');
+    
     let message = 'Appointments created successfully'; 
     if (duplicateCount > 0) {
       message += ` (Skipped ${duplicateCount} duplicate slots)`; 
     }
-    return res.status(201).json({ success: true, message });
+    return res.status(201).json({ 
+      success: true, 
+      message,
+      count: appointments.length,
+      firstAppointment: appointments[0] // for debugging
+    });
   } catch (error) {
     console.error('Error creating appointments:', error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error',
+      error: error.message // for debugging
+    });
   }
 }
+
+export async function deleteUnbookedAppointment(req, res) {
+    const appointmentId = req.params.id;
+    const doctorId = req.doctor._id;
+
+    try {
+        const appointment = await Appointment.findOne({
+            _id: appointmentId,
+            doctorId: doctorId
+        });
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: "Appointment not found or you don't have permission to delete it"
+            });
+        }
+
+        if (appointment.status !== 'available') {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot delete a booked appointment. Use cancel endpoint instead."
+            });
+        }
+
+        await Appointment.findByIdAndDelete(appointmentId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Appointment deleted successfully"
+        });
+    } catch (error) {
+        console.error('Error deleting appointment:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
+export async function cancelBookedAppointment(req, res) {
+    const appointmentId = req.params.id;
+    const doctorId = req.doctor._id;
+
+    try {
+        const appointment = await Appointment.findOne({
+            _id: appointmentId,
+            doctorId: doctorId
+        });
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: "Appointment not found or you don't have permission to cancel it"
+            });
+        }
+
+        if (appointment.status === 'available') {
+            return res.status(400).json({
+                success: false,
+                message: "Appointment is not booked yet"
+            });
+        }
+
+        appointment.status = 'cancelled';
+        await appointment.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Appointment cancelled successfully"
+        });
+    } catch (error) {
+        console.error('Error cancelling appointment:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
+export async function getConfirmedAppointments(req, res) {
+    const doctorId = req.doctor._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
+    try {
+        const total = await Appointment.countDocuments({
+            doctorId,
+            status: 'confirmed'
+        });
+
+        const appointments = await Appointment.find({
+            doctorId,
+            status: 'confirmed'
+        })
+        .populate('patientId', 'name email phone') // Assuming you have a Patient model
+        .sort({ appointmentDate: 1, appointmentTime: 1 })
+        .skip(skip)
+        .limit(limit);
+
+        return res.status(200).json({
+            success: true,
+            data: appointments,
+            pagination: {
+                total,
+                pages: Math.ceil(total / limit),
+                page,
+                limit
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching confirmed appointments:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
+export async function getAvailableAppointments(req, res) {
+    const doctorId = req.doctor._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
+    // Only show future available appointments
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    console.log('Debug - Query Parameters:', {
+        doctorId,
+        currentDate,
+        page,
+        limit,
+        skip
+    });
+
+    try {
+        const total = await Appointment.countDocuments({
+            doctorId,
+            status: 'available',
+            appointmentDate: { $gte: currentDate }
+        });
+
+        console.log('Debug - Total Available Appointments:', total);
+
+        const appointments = await Appointment.find({
+            doctorId,
+            status: 'available',
+            appointmentDate: { $gte: currentDate }
+        })
+        .sort({ appointmentDate: 1, appointmentTime: 1 })
+        .skip(skip)
+        .limit(limit);
+
+        console.log('Debug - Found Appointments:', appointments.length);
+
+        return res.status(200).json({
+            success: true,
+            data: appointments,
+            pagination: {
+                total,
+                pages: Math.ceil(total / limit),
+                page,
+                limit
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching available appointments:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+

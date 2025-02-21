@@ -1,42 +1,43 @@
 import mongoose from 'mongoose';
 
 const appointmentSchema = new mongoose.Schema({
-  doctorId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Doctor',
-    required: true,
-  },
-  appointmentDate: {
-    type: Date,
-    required: true,
-  },
-  appointmentTime: {
-    type: String,
-    required: true,
-  },
-  appointmentType: {
-    type: String,
-    enum: ['online', 'physical'],
-    default: null, 
-  },
-  price: {
-    type: Number,
-    default: null, 
-  },
-  patientId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Patient',
-    default: null,
-  },
-  status: {
-    type: String,
-    enum: ['available', 'booked', 'completed'],
-    default: 'available',
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+    doctorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Doctor',
+        required: true
+    },
+    patientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Patient',
+        default: null
+    },
+    appointmentDate: {
+        type: Date,
+        required: true
+    },
+    appointmentTime: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ['available', 'confirmed', 'cancelled'],
+        default: 'available'
+    },
+    appointmentType: {
+        type: String,
+        default: null
+    },
+    price: {
+        type: Number,
+        default: null
+    }
+}, {
+    timestamps: true
 });
 
-export default mongoose.model('Appointment', appointmentSchema);
+// Add index for common queries
+appointmentSchema.index({ doctorId: 1, status: 1, appointmentDate: 1 });
+
+const Appointment = mongoose.model('Appointment', appointmentSchema);
+export default Appointment;

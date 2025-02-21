@@ -6,9 +6,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
-// import ProfilePage from "./pages/ProfilePage";
-// import AppointmentsPage from "./pages/AppointmentsPage";
-// import SettingsPage from "./pages/SettingsPage";
+
 
 function App() {
   return (
@@ -21,11 +19,7 @@ function App() {
         
         {/* Dashboard and its related pages */}
         <Route path="/dashboard" element={<DashboardPage />} />
-        {/* <Route path="/dashboard/profile" element={<ProfilePage />} />
-        <Route path="/dashboard/appointments" element={<AppointmentsPage />} />
-        <Route path="/dashboard/settings" element={<SettingsPage />} />
-         */}
-        {/* Fallback redirect */}
+        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       
