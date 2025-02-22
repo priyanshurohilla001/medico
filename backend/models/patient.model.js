@@ -41,7 +41,18 @@ const patientSchema = new mongoose.Schema({
         type: String,
         required: [true, "Address is required"]
     },
-    LabRecords : [
+    approvedDoctors: [{
+        doctorId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Doctor',
+            required: true
+        },
+        approvalStatus: {
+            type: Boolean,
+            default: false
+        }
+    }],
+    LabRecords: [
         {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'LabRecord'

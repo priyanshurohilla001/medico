@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Appointment from '../models/appointment.model.js';
 import mongoose from 'mongoose';
+import Patient from '../models/patient.model.js';
 
 export const registerDoctor = async (req, res) => {
   try {
@@ -342,3 +343,134 @@ export const getDoctorUpcomingAppointments = async (req, res) => {
     });
   }
 };
+
+export async function checkPatientAccess(req, res) {
+    try {
+        const { patientId } = req.params;
+        const doctorId = req.doctor._id;
+
+        const patient = await Patient.findById(patientId);
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found"
+            });
+        }
+
+        const hasAccess = patient.approvedDoctors.some(
+            doc => doc.doctorId.toString() === doctorId.toString() && doc.approvalStatus
+        );
+
+        return res.status(200).json({
+            success: true,
+            hasAccess
+        });
+    } catch (error) {
+        console.error('Error in checkPatientAccess:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to check access"
+        });
+    }
+}
+
+export async function requestPatientAccess(req, res) {
+    try {
+        const { patientId } = req.body;
+        const doctorId = req.doctor._id;
+
+        const patient = await Patient.findById(patientId);
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found"
+            });
+        }
+
+        // Check if request already exists
+        const existingRequest = patient.approvedDoctors.find(
+            doc => doc.doctorId.toString() === doctorId.toString()
+        );
+
+        if (existingRequest) {
+            return res.status(400).json({
+                success: false,
+                message: "Access request already exists"
+            });
+        }
+
+        // Add new request
+        patient.approvedDoctors.push({
+            doctorId,
+            approvalStatus: false
+        });
+
+        await patient.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Access request sent successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to request access"
+        });
+    }
+}
+
+export async function getPatientRecords(req, res) {
+    try {
+        const { patientId } = req.params;
+        const doctorId = req.doctor._id;
+
+        // Check access first
+        const patient = await Patient.findById(patientId);
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found"
+            });
+        }
+
+        const hasAccess = patient.approvedDoctors.some(
+            doc => doc.doctorId.toString() === doctorId.toString() && doc.approvalStatus
+        );
+
+        if (!hasAccess) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied"
+            });
+        }
+
+        // Fetch completed appointments instead of medical records
+        const appointments = await Appointment.find({ 
+            patientId,
+            status: 'completed',
+            consultationDetails: { $exists: true, $ne: null }
+        })
+        .sort({ appointmentDate: -1 })
+        .populate('doctorId', 'name')
+        .select('appointmentDate consultationDetails doctorId');
+
+        const records = appointments.map(apt => ({
+            date: apt.appointmentDate,
+            doctorName: apt.doctorId.name,
+            diagnosis: apt.consultationDetails.notes,
+            prescriptions: apt.consultationDetails.medicines,
+            suggestions: apt.consultationDetails.suggestions
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: records
+        });
+    } catch (error) {
+        console.error('Error fetching patient records:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch records"
+        });
+    }
+}

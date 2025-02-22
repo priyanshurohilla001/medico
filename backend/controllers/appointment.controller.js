@@ -402,3 +402,33 @@ export async function getAppointmentById(req, res) {
         });
     }
 }
+
+export const getAppointmentDetails = async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const doctorId = req.doctor._id;
+
+        const appointment = await Appointment.findOne({
+            _id: appointmentId,
+            doctorId: doctorId
+        }).populate('patientId', 'name email phone');
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Appointment not found'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: appointment
+        });
+    } catch (error) {
+        console.error('Error in getAppointmentDetails:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
