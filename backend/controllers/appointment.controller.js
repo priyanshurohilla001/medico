@@ -1,6 +1,6 @@
-// main_file.js
 import Appointment from '../models/appointment.model.js';
 import { scheduleSchema } from "../zodTypes.js";
+import Doctor from '../models/doctor.model.js';
 
 export async function createAppointment(req, res) {
   console.log('Debug - Create Appointment Request Body:', req.body);
@@ -55,7 +55,7 @@ export async function createAppointment(req, res) {
   );
 
   const appointments = [];
-  let duplicateCount = 0; // To track how many duplicates are skipped
+  let duplicateCount = 0;
 
   while (currentDay <= finalDay) {
     let slotTime = new Date(currentDay.getTime() + startOffset);
@@ -106,14 +106,14 @@ export async function createAppointment(req, res) {
       success: true, 
       message,
       count: appointments.length,
-      firstAppointment: appointments[0] // for debugging
+      firstAppointment: appointments[0]
     });
   } catch (error) {
     console.error('Error creating appointments:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Internal server error',
-      error: error.message // for debugging
+      error: error.message
     });
   }
 }
@@ -213,7 +213,7 @@ export async function getConfirmedAppointments(req, res) {
             doctorId,
             status: 'confirmed'
         })
-        .populate('patientId', 'name email phone') // Assuming you have a Patient model
+        .populate('patientId', 'name email phone')
         .sort({ appointmentDate: 1, appointmentTime: 1 })
         .skip(skip)
         .limit(limit);
@@ -243,7 +243,6 @@ export async function getAvailableAppointments(req, res) {
     const limit = parseInt(req.query.limit) || 5;
     const skip = (page - 1) * limit;
 
-    // Only show future available appointments
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
@@ -294,3 +293,82 @@ export async function getAvailableAppointments(req, res) {
     }
 }
 
+
+export async function confirmAppointment(req, res) {
+    try {
+        const patientId = req.patient.id;
+        const { appointmentId, consultationType, doctorId, fees } = req.body;
+
+        console.log(appointmentId, consultationType, doctorId, fees)
+
+        if (!appointmentId || !consultationType || !doctorId || !fees) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required fields"
+            });
+        }
+
+        const doctor = await Doctor.findById(doctorId);
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor not found"
+            });
+        }
+
+        let correctFees;
+        if (consultationType === 'online') {
+            correctFees = doctor.consultationFees.online;
+        } else if (consultationType === 'physical') {
+            correctFees = doctor.consultationFees.physical;
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid consultation type"
+            });
+        }
+
+        console.log(correctFees)
+
+        if (fees !== correctFees) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid fees amount",
+                expectedFees: correctFees
+            });
+        }
+
+        const appointment = await Appointment.findOne({
+            _id: appointmentId,
+            doctorId: doctorId,
+            status: 'available'
+        });
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: "Appointment slot not found or already booked"
+            });
+        }
+
+        appointment.patientId = patientId;
+        appointment.status = 'confirmed';
+        appointment.appointmentType = consultationType;
+        appointment.price = fees;
+
+        await appointment.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Appointment confirmed successfully",
+            data: appointment
+        });
+
+    } catch (error) {
+        console.error('Error confirming appointment:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}

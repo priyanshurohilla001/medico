@@ -5,15 +5,18 @@ import {
     deleteUnbookedAppointment,
     cancelBookedAppointment,
     getConfirmedAppointments,
-    getAvailableAppointments
+    getAvailableAppointments,
+    confirmAppointment
 } from '../controllers/appointment.controller.js';
-
+import authPatient from '../services/authPatient.js';
 const router = express.Router();
 
-router.post('/create', authDoctor, createAppointment);          // Create an available slot
-router.get('/available', authDoctor, getAvailableAppointments);   // Get available slots
-router.get('/confirmed', authDoctor, getConfirmedAppointments);   // Get confirmed appointments
-router.delete('/:id', authDoctor, deleteUnbookedAppointment);     // Delete an available slot
-router.put('/:id/cancel', authDoctor, cancelBookedAppointment);   // Cancel a confirmed appointment
+router.post('/create', authDoctor, createAppointment);
+router.get('/available', authDoctor, getAvailableAppointments);
+router.get('/confirmed', authDoctor, getConfirmedAppointments);
+router.delete('/:id', authDoctor, deleteUnbookedAppointment);
+router.put('/:id/cancel', authDoctor, cancelBookedAppointment);
+router.post('/confirm', authPatient, confirmAppointment);
+
 
 export default router;

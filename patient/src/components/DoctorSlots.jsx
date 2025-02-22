@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,11 +17,13 @@ import { Separator } from "@/components/ui/separator";
 
 const DoctorSlots = ({ doctor }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [consultationType, setConsultationType] = useState("");
+  const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -52,20 +55,40 @@ const DoctorSlots = ({ doctor }) => {
     fetchAppointments();
   }, [id]);
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
     if (!selectedSlot || !consultationType) return;
 
-    const lola = {
-      doctorId: doctor._id,
-      appointmentId: selectedSlot.appointmentId,
-      consultationType,
-      time: selectedSlot.time,
-      fees: doctor.consultationFees[consultationType],
-    }
-    console.log(lola)
+    setIsBooking(true);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_SERVER_URL}/api/appointment/confirm`,
+        {
+          doctorId: doctor._id,
+          appointmentId: selectedSlot.appointmentId,
+          consultationType,
+          fees: doctor.consultationFees[consultationType],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
-    setSelectedSlot(null);
-    setConsultationType("");
+      if (response.data.success) {
+        toast.success("Appointment booked successfully!");
+        navigate("/appointments");
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || 
+        "Failed to book appointment. Please try again."
+      );
+    } finally {
+      setIsBooking(false);
+      setSelectedSlot(null);
+      setConsultationType("");
+    }
   };
 
   if (error) {
@@ -243,9 +266,35 @@ const DoctorSlots = ({ doctor }) => {
                         size="lg"
                         className="w-full"
                         onClick={handleBooking}
-                        disabled={!consultationType}
+                        disabled={!consultationType || isBooking}
                       >
-                        Confirm Booking
+                        {isBooking ? (
+                          <>
+                            <svg
+                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Booking Appointment...
+                          </>
+                        ) : (
+                          "Confirm Booking"
+                        )}
                       </Button>
                     </div>
                   </DialogContent>
