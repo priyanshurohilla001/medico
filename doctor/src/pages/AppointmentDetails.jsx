@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
-import { ChevronLeft, FileText, ShieldAlert, Loader2, Plus, Minus } from "lucide-react"
+import { ChevronLeft, FileText, ShieldAlert, Loader2, Plus, Minus, RefreshCcw, Brain } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -16,6 +16,13 @@ import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 const RecordsAccessRequest = ({ patientId, onRequest, requestStatus }) => {
   const [requesting, setRequesting] = useState(false)
@@ -342,6 +349,17 @@ export default function AppointmentDetails() {
   const [medicines, setMedicines] = useState([])
   const [suggestions, setSuggestions] = useState('')
   const [saving, setSaving] = useState(false)
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiAnalysis, setAiAnalysis] = useState(null)
+  const [analyzing, setAnalyzing] = useState(false)
+
+  const fetchConsultationDetails = async () => {
+    if (appointment?.consultationDetails) {
+      setNotes(appointment.consultationDetails.notes || '');
+      setMedicines(appointment.consultationDetails.medicines || []);
+      setSuggestions(appointment.consultationDetails.suggestions || '');
+    }
+  };
 
   useEffect(() => {
     const fetchAppointmentDetails = async () => {
@@ -387,14 +405,6 @@ export default function AppointmentDetails() {
   }, [appointmentId])
 
   useEffect(() => {
-    const fetchConsultationDetails = async () => {
-      if (appointment?.consultationDetails) {
-        setNotes(appointment.consultationDetails.notes || '');
-        setMedicines(appointment.consultationDetails.medicines || []);
-        setSuggestions(appointment.consultationDetails.suggestions || '');
-      }
-    };
-
     fetchConsultationDetails();
   }, [appointment]);
 
@@ -422,6 +432,35 @@ export default function AppointmentDetails() {
       toast.error(errorMessage)
       console.error('Failed to send access request:', error)
       throw error
+    }
+  }
+
+  const handleAiCheck = async () => {
+    setAiModalOpen(true)
+    setAnalyzing(true)
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_SERVER_URL}/api/appointment/${appointmentId}/ai-analyze`,
+        {
+          currentConsultation: {
+            notes,
+            medicines,
+            suggestions
+          },
+          patientId: appointment.patientId._id
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      )
+      setAiAnalysis(response.data.analysis)
+    } catch (error) {
+      toast.error("Failed to analyze with AI")
+      console.error(error)
+    } finally {
+      setAnalyzing(false)
     }
   }
 
@@ -691,6 +730,24 @@ export default function AppointmentDetails() {
                       >
                         Clear All
                       </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="gap-2"
+                        onClick={fetchConsultationDetails}
+                      >
+                        <RefreshCcw className="h-4 w-4" />
+                        Refresh Data
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="gap-2"
+                        onClick={handleAiCheck}
+                      >
+                        <Brain className="h-4 w-4" />
+                        AI Check
+                      </Button>
                       <Button type="submit" disabled={saving}>
                         {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {saving ? "Saving Changes..." : "Save Consultation"}
@@ -714,6 +771,63 @@ export default function AppointmentDetails() {
           </TabsContent>
         </Tabs>
       </div>
+      <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>AI Analysis</DialogTitle>
+            <DialogDescription>
+              Analyzing patient history and current consultation details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {analyzing ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <Brain className="h-12 w-12 animate-pulse text-primary" />
+                <p className="text-sm text-muted-foreground">
+                  Analyzing patient data...
+                </p>
+              </div>
+            ) : aiAnalysis ? (
+              <div className="space-y-4">
+                {aiAnalysis.observations && (
+                  <div>
+                    <h4 className="font-medium mb-2">Key Observations</h4>
+                    <ul className="list-disc list-inside space-y-2 text-sm">
+                      {aiAnalysis.observations.map((obs, i) => (
+                        <li key={i} className="text-muted-foreground">{obs}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiAnalysis.warnings && aiAnalysis.warnings.length > 0 && (
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                    <h4 className="font-medium text-red-700 mb-2">Warnings</h4>
+                    <ul className="list-disc list-inside space-y-2 text-sm">
+                      {aiAnalysis.warnings.map((warning, i) => (
+                        <li key={i} className="text-red-600">{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiAnalysis.suggestions && (
+                  <div>
+                    <h4 className="font-medium mb-2">Suggestions</h4>
+                    <ul className="list-disc list-inside space-y-2 text-sm">
+                      {aiAnalysis.suggestions.map((sug, i) => (
+                        <li key={i} className="text-muted-foreground">{sug}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground">
+                No analysis available
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

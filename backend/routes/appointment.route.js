@@ -8,7 +8,8 @@ import {
     getAvailableAppointments,
     confirmAppointment,
     getAppointmentById,
-    saveConsultationDetails
+    saveConsultationDetails,
+    aiAnalyze
 } from '../controllers/appointment.controller.js';
 import authPatient from '../services/authPatient.js';
 const router = express.Router();
@@ -21,5 +22,6 @@ router.put('/:id/cancel', authDoctor, cancelBookedAppointment);
 router.post('/confirm', authPatient, confirmAppointment);
 router.get('/:id', authDoctor, getAppointmentById);
 router.post('/:id/consultation', authDoctor, saveConsultationDetails);
+router.post('/:id/ai-analyze', authDoctor, aiAnalyze);
 
 export default router;

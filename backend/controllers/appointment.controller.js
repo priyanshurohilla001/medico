@@ -1,6 +1,10 @@
 import Appointment from '../models/appointment.model.js';
 import { scheduleSchema } from "../zodTypes.js";
 import Doctor from '../models/doctor.model.js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function createAppointment(req, res) {
   console.log('Debug - Create Appointment Request Body:', req.body);
@@ -469,6 +473,65 @@ export async function saveConsultationDetails(req, res) {
         return res.status(500).json({
             success: false,
             message: "Internal server error"
+        });
+    }
+}
+
+export async function aiAnalyze(req, res) {
+    try {
+        const { id } = req.params;
+        const doctorId = req.doctor._id;
+        const { currentConsultation, patientId } = req.body;
+
+        // Get patient's past records
+        const pastAppointments = await Appointment.find({
+            patientId,
+            status: 'completed'
+        }).sort({ appointmentDate: -1 }).limit(5);
+
+        // Format data for AI
+        const prompt = {
+            pastConsultations: pastAppointments.map(apt => ({
+                date: apt.appointmentDate,
+                notes: apt.consultationDetails?.notes,
+                medicines: apt.consultationDetails?.medicines,
+                suggestions: apt.consultationDetails?.suggestions
+            })),
+            currentConsultation
+        };
+
+        // Generate AI response
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const result = await model.generateContent(`
+            Analyze this patient's medical history and current consultation.
+            Look for:
+            1. Patterns in symptoms or treatments
+            2. Potential drug interactions
+            3. Treatment effectiveness
+            4. Suggestions for improvement
+            
+            Data: ${JSON.stringify(prompt)}
+            
+            Respond in JSON format with these keys:
+            {
+                "observations": ["list of key observations"],
+                "warnings": ["list of warnings if any"],
+                "suggestions": ["list of suggestions"]
+            }
+        `);
+
+        const response = result.response;
+        const analysis = JSON.parse(response.text());
+
+        return res.status(200).json({
+            success: true,
+            analysis
+        });
+    } catch (error) {
+        console.error('Error in AI analysis:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to analyze with AI"
         });
     }
 }
