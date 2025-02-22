@@ -2,6 +2,8 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import LabRecord from "../models/labRecord.model.js";
+import Patient from "../models/patient.model.js";
+import Appointment from "../models/appointment.model.js";
 import mongoose from "mongoose";
 const router = express.Router();
 dotenv.config();
@@ -235,6 +237,7 @@ router.post("/updateTestResults", validateTestResults, async (req, res) => {
   try {
     const { recordId, testResults } = req.body;
 
+    // Find the lab record
     const labRecord = await LabRecord.findById(recordId);
     if (!labRecord) {
       return res.status(404).json({
@@ -243,12 +246,12 @@ router.post("/updateTestResults", validateTestResults, async (req, res) => {
       });
     }
 
-    // Update each test with new results
+    // Update lab record tests
     labRecord.tests = labRecord.tests.map(test => {
       const updatedTest = testResults.find(t => t.testName === test.testName);
       if (updatedTest) {
         return {
-          ...test,
+          ...test.toObject(),
           result: updatedTest.result,
           referenceRange: updatedTest.referenceRange,
           remarks: updatedTest.remarks || '',
@@ -262,8 +265,22 @@ router.post("/updateTestResults", validateTestResults, async (req, res) => {
     labRecord.status = 'completed';
     labRecord.completedAt = new Date();
 
+    // Save lab record first
     await labRecord.save();
 
+    // Update Patient model
+    await Patient.findByIdAndUpdate(
+      labRecord.patientId,
+      { $addToSet: { LabRecords: labRecord._id } }
+    );
+
+    // Update Appointment model
+    await Appointment.findByIdAndUpdate(
+      labRecord.appointmentId,
+      { $addToSet: { LabRecords: labRecord._id } }
+    );
+
+    // Get fully populated record for response
     const populatedRecord = await LabRecord.findById(recordId)
       .populate("doctorId", "name email")
       .populate("patientId", "name email")
@@ -276,6 +293,7 @@ router.post("/updateTestResults", validateTestResults, async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Error in updateTestResults:", error);
     return res.status(500).json({
       success: false,
       message: "Error updating test results",

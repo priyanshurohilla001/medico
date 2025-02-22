@@ -1,26 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { toast } from "sonner"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
+import SingleLabTest from './SingleLabTest'
+import { Button } from "@/components/ui/button"
 
 const CompletedTests = () => {
   const [completedTests, setCompletedTests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(completedTests.length / itemsPerPage)
 
   const fetchCompletedTests = async () => {
     try {
@@ -44,66 +34,51 @@ const CompletedTests = () => {
     fetchCompletedTests()
   }, [])
 
-  if (loading) {
-    return (
-      <div className="flex h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
+  const currentTests = completedTests.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   return (
-    <ScrollArea className="h-[600px] w-full rounded-md border p-4">
-      <div className="space-y-4">
-        {completedTests.map((test) => (
-          <Card key={test._id}>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>{test.patientId?.name}</CardTitle>
-                  <CardDescription>
-                    Completed on: {new Date(test.completedAt).toLocaleDateString()}
-                  </CardDescription>
-                </div>
-                <Badge>Completed</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible>
-                <AccordionItem value="tests">
-                  <AccordionTrigger>View Test Results</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-4">
-                      {test.tests.map((testItem, index) => (
-                        <div key={index} className="p-4 border rounded-lg">
-                          <h4 className="font-semibold">{testItem.testName}</h4>
-                          <div className="grid gap-2 mt-2">
-                            <div className="text-sm">
-                              <span className="font-medium">Result:</span> {testItem.result}
-                            </div>
-                            <div className="text-sm">
-                              <span className="font-medium">Reference Range:</span> {testItem.referenceRange}
-                            </div>
-                            {testItem.remarks && (
-                              <div className="text-sm">
-                                <span className="font-medium">Remarks:</span> {testItem.remarks}
-                              </div>
-                            )}
-                            {testItem.isCritical && (
-                              <Badge variant="destructive" className="w-fit">Critical</Badge>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="space-y-4">
+      {loading ? (
+        <div className="flex h-[400px] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : completedTests.length === 0 ? (
+        <div className="text-center p-8 bg-muted/5 rounded-lg">
+          <p className="text-muted-foreground">No completed tests found</p>
+        </div>
+      ) : (
+        <>
+          {currentTests.map((test) => (
+            <SingleLabTest key={test._id} test={test} />
+          ))}
+
+          {completedTests.length > itemsPerPage && (
+            <div className="flex justify-center gap-2 py-4">
+              <Button
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+              >
+                Previous
+              </Button>
+              <span className="py-2 px-4">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }
 

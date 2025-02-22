@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CompletedTests from './CompletedTests'
+import { Switch } from "@/components/ui/switch"
 
 const EmptyState = () => (
   <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/50 rounded-lg">
@@ -276,6 +277,17 @@ const Labdash = () => {
                                         value={testResults[test.testName]?.remarks || ''}
                                         onChange={(e) => handleInputChange(test.testName, 'remarks', e.target.value)}
                                       />
+                                      <div className="flex items-center space-x-2 mt-2">
+                                        <Switch
+                                          id={`critical-${index}`}
+                                          checked={testResults[test.testName]?.isCritical || false}
+                                          onCheckedChange={(checked) => handleInputChange(test.testName, 'isCritical', checked)}
+                                          aria-label="Mark as critical"
+                                        />
+                                        <Label htmlFor={`critical-${index}`} className="text-red-500 cursor-pointer">
+                                          Mark as Critical Result
+                                        </Label>
+                                      </div>
                                     </div>
                                   ))}
                                   <Button 
