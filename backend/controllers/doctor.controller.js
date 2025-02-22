@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import Appointment from '../models/appointment.model.js';
 import mongoose from 'mongoose';
 import Patient from '../models/patient.model.js';
+import LabRecord from '../models/labRecord.model.js';  // Add this import at the top
 
 export const registerDoctor = async (req, res) => {
   try {
@@ -503,3 +504,84 @@ export async function getPatientRecords(req, res) {
         });
     }
 }
+
+// Add this new function
+export const createLabRequest = async (req, res) => {
+  try {
+    // Add validation for required fields
+    const { appointmentId, patientId, tests } = req.body;
+    
+    if (!appointmentId || !patientId || !tests || !Array.isArray(tests)) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing or invalid required fields"
+      });
+    }
+
+    const doctorId = req.doctor._id; // This will now be available from authDoctor middleware
+
+    // Log the data for debugging
+    console.log('Creating lab request with:', {
+      appointmentId,
+      doctorId: doctorId.toString(),
+      patientId,
+      tests
+    });
+
+    // Validate the appointment belongs to this doctor
+    const appointment = await Appointment.findOne({
+      _id: appointmentId,
+      doctorId: doctorId
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found or does not belong to this doctor"
+      });
+    }
+
+    // Create new lab record
+    const labRecord = new LabRecord({
+      appointmentId,
+      doctorId,
+      patientId,
+      tests: tests.map(test => ({
+        testName: test.testName,
+        status: 'pending'
+      })),
+      status: 'requested',
+      requestedAt: new Date()
+    });
+
+    await labRecord.save();
+
+    // Update appointment with lab record reference
+    await Appointment.findByIdAndUpdate(
+      appointmentId,
+      { $push: { labRecords: labRecord._id } }
+    );
+
+    // Get populated record
+    const populatedRecord = await LabRecord.findById(labRecord._id)
+      .populate('doctorId', 'name email')
+      .populate('patientId', 'name email')
+      .populate('appointmentId');
+
+    return res.status(201).json({
+      success: true,
+      message: "Lab request created successfully",
+      record: populatedRecord
+    });
+
+  } catch (error) {
+    console.error('Error creating lab request:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create lab request",
+      error: error.message
+    });
+  }
+};
+
+// ...rest of the code...

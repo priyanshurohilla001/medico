@@ -9,7 +9,8 @@ import {
     getDoctorUpcomingAppointments, 
     checkPatientAccess, 
     requestAccess,  // Changed from requestPatientAccess to requestAccess
-    getPatientRecords 
+    getPatientRecords,
+    createLabRequest
 } from '../controllers/doctor.controller.js';
 import authDoctor from '../services/authDoctor.js';
 
@@ -29,5 +30,6 @@ router.get('/:id', getDoctorById);
 router.get('/check-access/:patientId', authDoctor, checkPatientAccess);
 router.post('/request-access', authDoctor, requestAccess); // Update the route to use the correct function name
 router.get('/patient-records/:patientId', authDoctor, getPatientRecords);
+router.post("/create-lab-request", authDoctor, createLabRequest);
 
 export default router;

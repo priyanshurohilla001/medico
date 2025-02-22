@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
-import { ChevronLeft, FileText, ShieldAlert, Loader2, Plus, Minus, RefreshCcw, Brain } from "lucide-react"
+import { ChevronLeft, FileText, ShieldAlert, Loader2, Plus, Minus, RefreshCcw, Brain, FlaskConical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -338,6 +338,118 @@ const PatientRecords = ({ patientId, hasAccess, onRequest, requestStatus }) => {
   )
 }
 
+const TestRequestDialog = ({ open, onOpenChange, appointmentId, doctorId, patientId, onSuccess }) => {
+  const [tests, setTests] = useState([{ testName: '' }]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Log the request data for debugging
+      console.log('Sending request with data:', {
+        appointmentId,
+        patientId,
+        tests: tests.filter(test => test.testName.trim() !== '')
+      });
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_SERVER_URL}/api/doctor/create-lab-request`,
+        {
+          appointmentId,
+          patientId,
+          tests: tests.filter(test => test.testName.trim() !== '')
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Test request created successfully");
+        onSuccess && onSuccess(response.data.record);
+        onOpenChange(false);
+        setTests([{ testName: '' }]); // Reset form
+      }
+    } catch (error) {
+      console.error('Error details:', error.response?.data || error);
+      toast.error(error.response?.data?.message || "Failed to create test request");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Request Laboratory Tests</DialogTitle>
+          <DialogDescription>
+            Add tests that need to be performed for the patient
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
+            {tests.map((test, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  placeholder="Test name"
+                  value={test.testName}
+                  onChange={(e) => {
+                    const newTests = [...tests];
+                    newTests[index].testName = e.target.value;
+                    setTests(newTests);
+                  }}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const newTests = tests.filter((_, i) => i !== index);
+                    setTests(newTests.length ? newTests : [{ testName: '' }]);
+                  }}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setTests([...tests, { testName: '' }])}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Another Test
+          </Button>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Requesting...
+                </>
+              ) : (
+                'Submit Request'
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function AppointmentDetails() {
   const { appointmentId } = useParams()
   const navigate = useNavigate()
@@ -352,6 +464,8 @@ export default function AppointmentDetails() {
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [testRequestOpen, setTestRequestOpen] = useState(false);
+  const [labRecords, setLabRecords] = useState([]);
 
   const fetchConsultationDetails = async () => {
     if (appointment?.consultationDetails) {
@@ -406,6 +520,28 @@ export default function AppointmentDetails() {
 
   useEffect(() => {
     fetchConsultationDetails();
+  }, [appointment]);
+
+  useEffect(() => {
+    const fetchLabRecords = async () => {
+      if (!appointment?.patientId?._id) return;
+      
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_SERVER_URL}/api/doctor/lab-records/${appointment.patientId._id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        setLabRecords(response.data.records);
+      } catch (error) {
+        console.error('Error fetching lab records:', error);
+      }
+    };
+
+    fetchLabRecords();
   }, [appointment]);
 
   const handleAccessRequest = async (patientId) => {
@@ -748,6 +884,15 @@ export default function AppointmentDetails() {
                         <Brain className="h-4 w-4" />
                         AI Check
                       </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="gap-2"
+                        onClick={() => setTestRequestOpen(true)}
+                      >
+                        <FlaskConical className="h-4 w-4" />
+                        Request Tests
+                      </Button>
                       <Button type="submit" disabled={saving}>
                         {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {saving ? "Saving Changes..." : "Save Consultation"}
@@ -828,6 +973,16 @@ export default function AppointmentDetails() {
           </div>
         </DialogContent>
       </Dialog>
+      <TestRequestDialog
+        open={testRequestOpen}
+        onOpenChange={setTestRequestOpen}
+        appointmentId={appointmentId}
+        doctorId={appointment?.doctorId}
+        patientId={appointment?.patientId?._id}
+        onSuccess={(record) => {
+          setLabRecords([...labRecords, record]);
+        }}
+      />
     </div>
   )
 }
