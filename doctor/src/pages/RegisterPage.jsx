@@ -48,6 +48,16 @@ const formSchema = z.object({
   }, {
     message: "Age must be 18 or older.",
   }),
+  consultationFees: z.object({
+    online: z.string().min(1, { message: "Online consultation fee is required" }).refine(
+      (value) => !isNaN(value) && Number(value) >= 0,
+      { message: "Fee must be a non-negative number" }
+    ),
+    physical: z.string().min(1, { message: "Physical consultation fee is required" }).refine(
+      (value) => !isNaN(value) && Number(value) >= 0,
+      { message: "Fee must be a non-negative number" }
+    ),
+  }),
 });
 
 export default function RegisterPage() {
@@ -64,6 +74,10 @@ export default function RegisterPage() {
       qualifications: "",
       experience: "",
       age: "",
+      consultationFees: {
+        online: "",
+        physical: "",
+      },
     },
   });
 
@@ -75,6 +89,10 @@ export default function RegisterPage() {
         ...values,
         age: values.age ? Number(values.age) : undefined,
         experience: values.experience ? Number(values.experience) : undefined,
+        consultationFees: {
+          online: Number(values.consultationFees.online),
+          physical: Number(values.consultationFees.physical),
+        },
       };
   
       const response = await axios.post(
@@ -204,6 +222,34 @@ export default function RegisterPage() {
                       <FormLabel>Age</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. 35" type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="consultationFees.online"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Online Consultation Fee (₹)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 500" type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="consultationFees.physical"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Physical Consultation Fee (₹)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 1000" type="number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

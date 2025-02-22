@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import Patient from '../models/patient.model.js';
 import { registerSchema, loginSchema, updateProfileSchema, changePasswordSchema } from '../zodTypes.js';
+import Appointment from '../models/appointment.model.js';
 
 export async function registerPatient(req, res) {
     try {
@@ -275,6 +276,64 @@ export async function updateDoctorAccess(req, res) {
         return res.status(500).json({
             success: false,
             message: "Failed to update access"
+        });
+    }
+}
+
+export async function getMyAppointments(req, res) {
+    try {
+        const appointments = await Appointment.find({ patientId: req.patient.id })
+            .populate({
+                path: 'doctorId',
+                select: 'name email specialties consultationFees qualification experience'
+            })
+            .sort({ appointmentDate: -1, appointmentTime: -1 });
+
+        return res.status(200).json({
+            success: true,
+            appointments
+        });
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch appointments"
+        });
+    }
+}
+
+export async function getAppointmentDetails(req, res) {
+    try {
+        const appointment = await Appointment.findById(req.params.appointmentId)
+            .populate({
+                path: 'doctorId',
+                select: 'name email specialties consultationFees qualification experience about education'
+            })
+            .populate('patientId', 'name email phone age gender');
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: "Appointment not found"
+            });
+        }
+
+        if (appointment.patientId._id.toString() !== req.patient.id) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized access"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            appointment
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch appointment details",
+            error: error.message
         });
     }
 }

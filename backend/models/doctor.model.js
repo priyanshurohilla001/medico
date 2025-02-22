@@ -33,9 +33,11 @@ const doctorSchema = new mongoose.Schema({
   consultationFees: {
     online: {
       type: Number,
+      required: true,
     },
     physical: {
       type: Number,
+      required: true,
     },
   },
   createdAt: {

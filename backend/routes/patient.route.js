@@ -7,7 +7,9 @@ import {
   changePassword,
   getPatientLabRecords,
   getDoctorAccessRequests,
-  updateDoctorAccess
+  updateDoctorAccess,
+  getMyAppointments,
+  getAppointmentDetails
 } from '../controllers/patient.controller.js';
 import authPatient from '../services/authPatient.js';
 
@@ -21,5 +23,7 @@ router.put('/change-password', authPatient, changePassword);
 router.get('/lab-records', authPatient, getPatientLabRecords);
 router.get('/access-requests', authPatient, getDoctorAccessRequests);
 router.put('/update-access', authPatient, updateDoctorAccess);
+router.get('/my-appointments', authPatient, getMyAppointments);
+router.get('/my-appointments/:appointmentId', authPatient, getAppointmentDetails);
 
 export default router;

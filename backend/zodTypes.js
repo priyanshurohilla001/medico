@@ -10,6 +10,10 @@ export const registerDoctorSchema = z.object({
   qualifications: z.string().optional(),
   experience: z.number().optional(),
   age: z.number().optional(),
+  consultationFees: z.object({
+    online: z.number().min(0, "Online consultation fee must be non-negative"),
+    physical: z.number().min(0, "Physical consultation fee must be non-negative"),
+  }),
 });
 
 export const scheduleSchema = z.object({
