@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
-import { ChevronLeft, FileText, ShieldAlert, Loader2 } from "lucide-react"
+import { ChevronLeft, FileText, ShieldAlert, Loader2, Plus, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,6 +13,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 const RecordsAccessRequest = ({ patientId, onRequest, requestStatus }) => {
   const [requesting, setRequesting] = useState(false)
@@ -335,6 +338,10 @@ export default function AppointmentDetails() {
   const [loading, setLoading] = useState(true)
   const [hasAccess, setHasAccess] = useState(false)
   const [requestStatus, setRequestStatus] = useState(null)
+  const [notes, setNotes] = useState('')
+  const [medicines, setMedicines] = useState([])
+  const [suggestions, setSuggestions] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const fetchAppointmentDetails = async () => {
@@ -378,6 +385,18 @@ export default function AppointmentDetails() {
 
     fetchAppointmentDetails()
   }, [appointmentId])
+
+  useEffect(() => {
+    const fetchConsultationDetails = async () => {
+      if (appointment?.consultationDetails) {
+        setNotes(appointment.consultationDetails.notes || '');
+        setMedicines(appointment.consultationDetails.medicines || []);
+        setSuggestions(appointment.consultationDetails.suggestions || '');
+      }
+    };
+
+    fetchConsultationDetails();
+  }, [appointment]);
 
   const handleAccessRequest = async (patientId) => {
     try {
@@ -507,6 +526,180 @@ export default function AppointmentDetails() {
                 </div>
               </CardContent>
             </Card>
+            {appointment.status === 'confirmed' && (
+              <Card className="mt-6">
+                <CardHeader className="border-b">
+                  <CardTitle>Consultation Details</CardTitle>
+                  <CardDescription>
+                    Record patient consultation notes, prescriptions, and recommendations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSaving(true);
+                    try {
+                      await axios.post(
+                        `${import.meta.env.VITE_SERVER_URL}/api/appointment/${appointmentId}/consultation`,
+                        {
+                          notes,
+                          medicines,
+                          suggestions
+                        },
+                        {
+                          headers: {
+                            Authorization: `Bearer ${localStorage.getItem('token')}`
+                          }
+                        }
+                      );
+                      toast.success("Consultation details saved successfully");
+                    } catch (error) {
+                      toast.error("Failed to save consultation details");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }} className="space-y-8">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label className="text-base">Clinical Notes</Label>
+                        <Textarea 
+                          placeholder="Enter your clinical observations and diagnosis"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          className="min-h-[120px]"
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <Label className="text-base">Prescribed Medicines</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setMedicines([
+                              ...medicines,
+                              { name: '', dosage: '', frequency: '', duration: '' }
+                            ])}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Medicine
+                          </Button>
+                        </div>
+
+                        <div className="space-y-4">
+                          {medicines.map((medicine, index) => (
+                            <Card key={index}>
+                              <CardContent className="p-4">
+                                <div className="flex gap-4">
+                                  <div className="flex-1 grid grid-cols-4 gap-4">
+                                    <div>
+                                      <Label>Medicine Name</Label>
+                                      <Input
+                                        required
+                                        placeholder="e.g., Paracetamol"
+                                        value={medicine.name}
+                                        onChange={(e) => {
+                                          const newMedicines = [...medicines];
+                                          newMedicines[index].name = e.target.value;
+                                          setMedicines(newMedicines);
+                                        }}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label>Dosage</Label>
+                                      <Input
+                                        placeholder="e.g., 500mg"
+                                        value={medicine.dosage}
+                                        onChange={(e) => {
+                                          const newMedicines = [...medicines];
+                                          newMedicines[index].dosage = e.target.value;
+                                          setMedicines(newMedicines);
+                                        }}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label>Frequency</Label>
+                                      <Input
+                                        placeholder="e.g., Twice daily"
+                                        value={medicine.frequency}
+                                        onChange={(e) => {
+                                          const newMedicines = [...medicines];
+                                          newMedicines[index].frequency = e.target.value;
+                                          setMedicines(newMedicines);
+                                        }}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label>Duration</Label>
+                                      <Input
+                                        placeholder="e.g., 5 days"
+                                        value={medicine.duration}
+                                        onChange={(e) => {
+                                          const newMedicines = [...medicines];
+                                          newMedicines[index].duration = e.target.value;
+                                          setMedicines(newMedicines);
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-10 w-10 mt-6"
+                                    onClick={() => {
+                                      const newMedicines = [...medicines];
+                                      newMedicines.splice(index, 1);
+                                      setMedicines(newMedicines);
+                                    }}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {medicines.length === 0 && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              No medicines prescribed yet
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-base">Additional Recommendations</Label>
+                        <Textarea
+                          placeholder="Enter lifestyle changes, follow-up instructions, or other recommendations"
+                          value={suggestions}
+                          onChange={(e) => setSuggestions(e.target.value)}
+                          className="min-h-[100px]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-4">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          setNotes('');
+                          setMedicines([]);
+                          setSuggestions('');
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                      <Button type="submit" disabled={saving}>
+                        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {saving ? "Saving Changes..." : "Save Consultation"}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="records">
