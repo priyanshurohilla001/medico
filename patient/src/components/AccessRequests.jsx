@@ -18,11 +18,15 @@ export default function AccessRequests() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
+  const getPendingRequests = (requests) => {
+    return requests.filter(req => !req.approvalStatus);
+  };
+
   const fetchRequests = async () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/api/patient/access-requests`,  // This matches our backend route now
+        `${import.meta.env.VITE_SERVER_URL}/api/patient/access-requests`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -32,7 +36,7 @@ export default function AccessRequests() {
       setRequests(response.data.requests);
     } catch (error) {
       toast.error("Failed to fetch access requests");
-      console.error(error); // Add this for debugging
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -40,7 +44,7 @@ export default function AccessRequests() {
 
   const handleAccessUpdate = async (doctorId, approved) => {
     try {
-      await axios.put(  // Changed from post to put to match backend
+      await axios.put(
         `${import.meta.env.VITE_SERVER_URL}/api/patient/update-access`,
         { doctorId, approved },
         {
@@ -50,20 +54,13 @@ export default function AccessRequests() {
         }
       );
 
-      if (!approved) {
-        setRequests(requests.filter(req => req.doctorId._id !== doctorId));
-      } else {
-        setRequests(requests.map(req => 
-          req.doctorId._id === doctorId 
-            ? { ...req, approvalStatus: true }
-            : req
-        ));
-      }
-
-      toast.success(`Access ${approved ? 'approved' : 'rejected'} successfully`);
+      // Remove the request from the list regardless of approve/reject
+      setRequests(requests.filter(req => req.doctorId._id !== doctorId));
+      
+      toast.success(`Access request ${approved ? 'approved' : 'rejected'}`);
     } catch (error) {
       toast.error("Failed to update access");
-      console.error(error); // Add this for debugging
+      console.error(error);
     }
   };
 
@@ -83,7 +80,7 @@ export default function AccessRequests() {
         <DialogHeader>
           <DialogTitle>Doctor Access Requests</DialogTitle>
           <DialogDescription>
-            Manage doctors who have requested access to your lab records
+            Manage pending access requests from doctors
           </DialogDescription>
         </DialogHeader>
 
@@ -92,13 +89,13 @@ export default function AccessRequests() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-          ) : requests.length === 0 ? (
+          ) : getPendingRequests(requests).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               No pending access requests
             </p>
           ) : (
             <div className="space-y-4">
-              {requests.map((request) => (
+              {getPendingRequests(requests).map((request) => (
                 <div
                   key={request.doctorId._id}
                   className="flex items-center justify-between p-4 border rounded-lg"
@@ -115,30 +112,24 @@ export default function AccessRequests() {
                     )}
                   </div>
                   
-                  {!request.approvalStatus ? (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleAccessUpdate(request.doctorId._id, false)}
-                      >
-                        <UserX2 className="h-4 w-4 mr-2" />
-                        Reject
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleAccessUpdate(request.doctorId._id, true)}
-                      >
-                        <UserCheck2 className="h-4 w-4 mr-2" />
-                        Approve
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-green-600 font-medium">
-                      Approved
-                    </span>
-                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleAccessUpdate(request.doctorId._id, false)}
+                    >
+                      <UserX2 className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleAccessUpdate(request.doctorId._id, true)}
+                    >
+                      <UserCheck2 className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

@@ -251,23 +251,25 @@ export async function updateDoctorAccess(req, res) {
         const { doctorId, approved } = req.body;
         
         const patient = await Patient.findById(req.patient.id);
-        const requestIndex = patient.approvedDoctors.findIndex(
-            doc => doc.doctorId.toString() === doctorId
-        );
-
-        if (requestIndex === -1) {
-            return res.status(404).json({
-                success: false,
-                message: "Request not found"
-            });
+        if (!approved) {
+            // Remove the doctor completely from approvedDoctors array
+            patient.approvedDoctors = patient.approvedDoctors.filter(
+                doc => doc.doctorId.toString() !== doctorId
+            );
+        } else {
+            const requestIndex = patient.approvedDoctors.findIndex(
+                doc => doc.doctorId.toString() === doctorId
+            );
+            if (requestIndex !== -1) {
+                patient.approvedDoctors[requestIndex].approvalStatus = true;
+            }
         }
-
-        patient.approvedDoctors[requestIndex].approvalStatus = approved;
+        
         await patient.save();
 
         return res.status(200).json({
             success: true,
-            message: `Access ${approved ? 'granted' : 'denied'}`
+            message: `Access ${approved ? 'granted' : 'revoked'}`
         });
     } catch (error) {
         return res.status(500).json({
