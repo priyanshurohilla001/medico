@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -23,6 +23,7 @@ import {
   CardTitle,
   CardDescription,
 } from "../components/ui/card";
+import { Alert } from "../components/ui/alert";
 
 const formSchema = z.object({
   email: z.string()
@@ -70,10 +71,13 @@ export default function LabLogin() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Lab Assistant Login</CardTitle>
           <CardDescription>
-            Enter your email and password to access your account
+            Enter the hard-coded email and password to access your account
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4" variant="info">
+            Simulation active: Use email: lola@gmail.com and password: loallola.
+          </Alert>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -83,7 +87,7 @@ export default function LabLogin() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="patient@example.com" type="email" {...field} />
+                      <Input placeholder="email@gmai.com" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -96,7 +100,7 @@ export default function LabLogin() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your password" type="password" {...field} />
+                      <Input placeholder="securepassword" type="password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -105,9 +109,6 @@ export default function LabLogin() {
               <div className="flex flex-col gap-4">
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Logging in..." : "Login"}
-                </Button>
-                <Button variant="link" className="w-full" asChild>
-                  <Link to="/register">Don't have an account? Register</Link>
                 </Button>
               </div>
             </form>

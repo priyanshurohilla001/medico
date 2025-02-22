@@ -55,7 +55,7 @@ const labTestSchema = new mongoose.Schema({
   */
     
 
-const labTestRequestSchema = new mongoose.Schema({
+const LabRecordSchema = new mongoose.Schema({
   appointmentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Appointment',
@@ -89,4 +89,4 @@ const labTestRequestSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-export default mongoose.model('LabTestRequest', labTestRequestSchema);
+export default mongoose.model('LabRecord', LabRecordSchema);

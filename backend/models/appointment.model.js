@@ -46,6 +46,12 @@ const appointmentSchema = new mongoose.Schema(
       ],
       suggestions: { type: String }, // AI-generated suggestions
     },
+    LabRecords: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "LabRecord",
+      },
+    ],
   },
   {
     timestamps: true,

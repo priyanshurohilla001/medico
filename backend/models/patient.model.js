@@ -40,7 +40,13 @@ const patientSchema = new mongoose.Schema({
     address: {
         type: String,
         required: [true, "Address is required"]
-    }
+    },
+    LabRecords : [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'LabRecord'
+        }
+    ]
 }, {
     timestamps: true
 });
