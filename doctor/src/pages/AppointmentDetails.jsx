@@ -106,55 +106,223 @@ const PatientRecords = ({ patientId, hasAccess, onRequest, requestStatus }) => {
   ].sort((a, b) => b.date - a.date)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {allRecords.map((record, index) => (
-        <Card key={index}>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {record.type === 'appointment' ? (
-                <>Visit on {record.date.toLocaleDateString()}</>
-              ) : (
-                <>Lab Tests - {record.status}</>
-              )}
-            </CardTitle>
-            {record.type === 'appointment' && (
-              <CardDescription>Dr. {record.doctorName}</CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {record.type === 'appointment' ? (
-                <>
-                  <p className="text-sm">{record.diagnosis}</p>
-                  {record.prescriptions && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <FileText className="h-4 w-4" />
-                      {record.prescriptions.length} Prescriptions
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="space-y-2">
-                  {record.tests.map((test, i) => (
-                    <div key={i} className="text-sm">
-                      <p className="font-medium">{test.testName}</p>
-                      {test.result && (
-                        <p className="text-muted-foreground">
-                          Result: {test.result}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+        <Card key={index} className="overflow-hidden">
+          <CardHeader className="border-b bg-muted/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {record.type === 'appointment' ? (
+                  <FileText className="h-5 w-5 text-blue-500" />
+                ) : (
+                  <div className="rounded-full bg-green-100 p-2">
+                    <FileText className="h-5 w-5 text-green-600" />
+                  </div>
+                )}
+                <div>
+                  <CardTitle className="text-base">
+                    {record.type === 'appointment' ? (
+                      <>Consultation Visit</>
+                    ) : (
+                      <>Laboratory Report</>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {record.date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </CardDescription>
                 </div>
+              </div>
+              {record.type === 'labRecord' && (
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  record.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  record.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {record.status}
+                </span>
               )}
             </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {record.type === 'appointment' ? (
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Doctor</h4>
+                  <p className="text-sm">Dr. {record.doctorName}</p>
+                </div>
+                {record.diagnosis && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Diagnosis</h4>
+                    <p className="text-sm">{record.diagnosis}</p>
+                  </div>
+                )}
+                {record.prescriptions && record.prescriptions.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Prescriptions</h4>
+                    <div className="grid gap-3">
+                      {record.prescriptions.map((prescription, i) => (
+                        <div key={i} className="text-sm bg-muted/50 p-3 rounded-lg">
+                          <p className="font-medium">{prescription.medicine}</p>
+                          <p className="text-muted-foreground">{prescription.dosage}</p>
+                          {prescription.duration && (
+                            <p className="text-muted-foreground">Duration: {prescription.duration}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Request Date</h4>
+                    <p className="text-sm">
+                      {new Date(record.requestedAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  {record.completedAt && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Completed Date</h4>
+                      <p className="text-sm">
+                        {new Date(record.completedAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-4">Test Results</h4>
+                  <div className="grid gap-4">
+                    {record.tests.map((test, i) => (
+                      <Card key={i}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-base">{test.testName}</CardTitle>
+                              <CardDescription>
+                                Performed on: {new Date(test.performedAt).toLocaleDateString()}
+                              </CardDescription>
+                            </div>
+                            <div className="flex gap-2">
+                              {test.isCritical && (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                                  Critical
+                                </span>
+                              )}
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                record.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                record.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-blue-100 text-blue-700'
+                              }`}>
+                                {record.status}
+                              </span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {/* Test Result Details */}
+                          <div className="grid gap-3">
+                            {test.result && (
+                              <div className="grid grid-cols-2 gap-1 text-sm">
+                                <span className="text-muted-foreground">Result</span>
+                                <span className="font-medium">{test.result}</span>
+                              </div>
+                            )}
+                            {test.referenceRange && (
+                              <div className="grid grid-cols-2 gap-1 text-sm">
+                                <span className="text-muted-foreground">Reference Range</span>
+                                <span>{test.referenceRange}</span>
+                              </div>
+                            )}
+                            {test.remarks && (
+                              <div className="text-sm">
+                                <span className="text-muted-foreground block mb-1">Remarks</span>
+                                <p className="mt-1 text-sm">{test.remarks}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Additional Metadata */}
+                          {(test.isCritical || test.remarks) && (
+                            <div className="mt-4 p-3 rounded-lg bg-muted/50">
+                              {test.isCritical && (
+                                <div className="flex items-center gap-2 text-red-600 mb-2">
+                                  <ShieldAlert className="h-4 w-4" />
+                                  <span className="text-sm font-medium">
+                                    This result requires immediate attention
+                                  </span>
+                                </div>
+                              )}
+                              {test.remarks && (
+                                <p className="text-sm text-muted-foreground">
+                                  {test.remarks}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Lab Record Summary */}
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Total Tests</span>
+                        <span className="font-medium">{record.tests.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Critical Results</span>
+                        <span className="font-medium">
+                          {record.tests.filter(t => t.isCritical).length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Status</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          record.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          record.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {record.status}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
       {allRecords.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          No records found
-        </div>
+        <Card className="p-8">
+          <div className="text-center text-muted-foreground">
+            <FileText className="h-8 w-8 mx-auto mb-3 opacity-50" />
+            <p>No medical records found</p>
+          </div>
+        </Card>
       )}
     </div>
   )
