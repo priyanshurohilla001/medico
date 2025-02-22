@@ -8,6 +8,7 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import Labdash from "./labAssistant/LabDash";
 import LabLogin from "./labAssistant/LabLogin";
+import AppointmentDetails from "./pages/AppointmentDetails";
 
 const LabPrivateRoute = ({ children }) => {
   const isLabLoggedIn = localStorage.getItem("token");
@@ -46,7 +47,14 @@ function App() {
           }
         />
         <Route path="/lab/login" element={<LabLogin />} />
-
+        <Route
+          path="/appointments/:appointmentId"
+          element={
+            <DoctorDashboard>
+              <AppointmentDetails />
+            </DoctorDashboard>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

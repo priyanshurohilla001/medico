@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/pagination"
 import { useState, useEffect } from "react"
 import axios from "axios"
+import { useNavigate } from 'react-router-dom'
 
 const ITEMS_PER_PAGE = 10
 
@@ -110,6 +111,8 @@ export default function Appointments() {
   };
 
   const AppointmentTable = ({ appointments, type }) => {
+    const navigate = useNavigate()
+    
     if (loading) {
       return <div className="text-center py-4">Loading...</div>;
     }
@@ -160,17 +163,29 @@ export default function Appointments() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant={type === 'confirmed' ? "destructive" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setSelectedAppointment(appointment)
-                        setActionType(type === 'confirmed' ? 'cancel' : 'delete')
-                        setOpenDialog(true)
-                      }}
-                    >
-                      {type === 'confirmed' ? 'Cancel' : 'Delete Slot'}
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant={type === 'confirmed' ? "destructive" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setSelectedAppointment(appointment)
+                          setActionType(type === 'confirmed' ? 'cancel' : 'delete')
+                          setOpenDialog(true)
+                        }}
+                      >
+                        {type === 'confirmed' ? 'Cancel' : 'Delete Slot'}
+                      </Button>
+                      {type === 'confirmed' && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => navigate(`/appointments/${appointment._id}`)}
+                        >
+                          Consult
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

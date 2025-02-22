@@ -6,7 +6,8 @@ import {
     cancelBookedAppointment,
     getConfirmedAppointments,
     getAvailableAppointments,
-    confirmAppointment
+    confirmAppointment,
+    getAppointmentById
 } from '../controllers/appointment.controller.js';
 import authPatient from '../services/authPatient.js';
 const router = express.Router();
@@ -17,6 +18,6 @@ router.get('/confirmed', authDoctor, getConfirmedAppointments);
 router.delete('/:id', authDoctor, deleteUnbookedAppointment);
 router.put('/:id/cancel', authDoctor, cancelBookedAppointment);
 router.post('/confirm', authPatient, confirmAppointment);
-
+router.get('/:id', authDoctor, getAppointmentById);
 
 export default router;

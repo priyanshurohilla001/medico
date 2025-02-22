@@ -372,3 +372,33 @@ export async function confirmAppointment(req, res) {
         });
     }
 }
+
+export async function getAppointmentById(req, res) {
+    const { id } = req.params;
+    const doctorId = req.doctor._id;
+
+    try {
+        const appointment = await Appointment.findOne({
+            _id: id,
+            doctorId: doctorId
+        }).populate('patientId', 'name email phone');
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: "Appointment not found or you don't have permission to view it"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: appointment
+        });
+    } catch (error) {
+        console.error('Error fetching appointment details:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
