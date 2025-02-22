@@ -29,8 +29,8 @@ const labTestSchema = new mongoose.Schema({
     // Useful for tracking historical test data.
     performedAt: {
       type: Date,
-      default: Date.now,
     },
+    
     // A flag to indicate if the test result is critical and may require urgent attention.
     isCritical: {
       type: Boolean,
