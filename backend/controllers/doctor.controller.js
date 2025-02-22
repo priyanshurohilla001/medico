@@ -2,6 +2,8 @@ import Doctor from '../models/doctor.model.js';
 import { registerDoctorSchema } from '../zodTypes.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import Appointment from '../models/appointment.model.js';
+import mongoose from 'mongoose';
 
 export const registerDoctor = async (req, res) => {
   try {
@@ -275,3 +277,68 @@ export const getDoctorById = async (req, res) => {
   }
 };
 
+
+export const getDoctorUpcomingAppointments = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid doctor ID format'
+      });
+    }
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const appointments = await Appointment.find({
+      doctorId: id,
+      appointmentDate: { $gte: today }
+    })
+    .sort({ appointmentDate: 1, appointmentTime: 1 })
+    .limit(50)
+    .select('appointmentDate appointmentTime _id patientId')
+    .lean();
+
+    const dateSet = new Set();
+    const orderedDates = [];
+    
+    for (const apt of appointments) {
+      const dateStr = apt.appointmentDate.toISOString().split('T')[0];
+      if (!dateSet.has(dateStr)) {
+        dateSet.add(dateStr);
+        orderedDates.push(dateStr);
+        if (orderedDates.length >= 7) break;
+      }
+    }
+
+    const result = [];
+    for (const date of orderedDates) {
+      result.push({
+        date,
+        appointments: appointments
+          .filter(apt => 
+            apt.appointmentDate.toISOString().startsWith(date)
+          )
+          .map(apt => ({
+            time: apt.appointmentTime,
+            appointmentId: apt._id,
+            patientId: apt.patientId
+          }))
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      appointments: result
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};

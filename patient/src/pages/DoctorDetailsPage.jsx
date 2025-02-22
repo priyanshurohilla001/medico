@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../co
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea"; // not used but might be useful later, keep it for now
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import DoctorSlots from "@/components/DoctorSlots";
 
 
 const DoctorDetailsPage = () => {
@@ -117,6 +118,7 @@ const DoctorDetailsPage = () => {
           </CardContent>
         </Card>
       )}
+      { doctor &&  <DoctorSlots doctor={doctor} />}
     </div>
   );
 };
