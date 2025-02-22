@@ -6,6 +6,8 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import Labdash from "./labAssistant/LabDash"
+import LabLogin from "./labAssistant/LabLogin";
 
 
 function App() {
@@ -19,6 +21,8 @@ function App() {
         
         {/* Dashboard and its related pages */}
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/lab/dashboard" element={<Labdash />} />
+        <Route path="/lab/login" element={< LabLogin/>} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -6,7 +6,7 @@ import { connectToDatabase } from './db.js';
 import doctorRoutes from './routes/doctor.route.js';
 import patientRoutes from './routes/patient.route.js';
 import appointmentRoutes from './routes/appointment.route.js';
-
+import labAssistantRoutes from './routes/labAssistant.route.js';
 dotenv.config();
 
 const app = express();
@@ -28,6 +28,7 @@ app.get('/', (req, res) => {
 app.use('/api/doctor', doctorRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/appointment', appointmentRoutes);
+app.use("/api/labAssistant", labAssistantRoutes);
 
 const PORT = process.env.PORT || 5000;
 
