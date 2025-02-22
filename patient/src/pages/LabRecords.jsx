@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import AccessRequests from '../components/AccessRequests';
 
 const TestResultCard = ({ test }) => (
   <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -194,14 +195,17 @@ export default function LabRecords() {
             View and manage your laboratory test results
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={handleRefresh}
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <AccessRequests />
+        </div>
       </div>
 
       <Tabs defaultValue="all" className="w-full">

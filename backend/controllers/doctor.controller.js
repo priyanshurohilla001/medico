@@ -374,10 +374,16 @@ export async function checkPatientAccess(req, res) {
     }
 }
 
-export async function requestPatientAccess(req, res) {
+export const requestAccess = async (req, res) => {
     try {
         const { patientId } = req.body;
-        const doctorId = req.doctor._id;
+        
+        if (!patientId) {
+            return res.status(400).json({
+                success: false,
+                message: "Patient ID is required"
+            });
+        }
 
         const patient = await Patient.findById(patientId);
         if (!patient) {
@@ -389,7 +395,7 @@ export async function requestPatientAccess(req, res) {
 
         // Check if request already exists
         const existingRequest = patient.approvedDoctors.find(
-            doc => doc.doctorId.toString() === doctorId.toString()
+            doc => doc.doctorId.toString() === req.doctor.id
         );
 
         if (existingRequest) {
@@ -401,7 +407,7 @@ export async function requestPatientAccess(req, res) {
 
         // Add new request
         patient.approvedDoctors.push({
-            doctorId,
+            doctorId: req.doctor.id,
             approvalStatus: false
         });
 
@@ -412,12 +418,13 @@ export async function requestPatientAccess(req, res) {
             message: "Access request sent successfully"
         });
     } catch (error) {
+        console.error('Request access error:', error);
         return res.status(500).json({
             success: false,
-            message: "Failed to request access"
+            message: "Failed to send access request"
         });
     }
-}
+};
 
 export async function getPatientRecords(req, res) {
     try {
@@ -425,7 +432,12 @@ export async function getPatientRecords(req, res) {
         const doctorId = req.doctor._id;
 
         // Check access first
-        const patient = await Patient.findById(patientId);
+        const patient = await Patient.findById(patientId)
+            .populate({
+                path: 'LabRecords',
+                select: 'tests status requestedAt completedAt'
+            });
+
         if (!patient) {
             return res.status(404).json({
                 success: false,
@@ -444,23 +456,40 @@ export async function getPatientRecords(req, res) {
             });
         }
 
-        // Fetch completed appointments instead of medical records
-        const appointments = await Appointment.find({ 
-            patientId,
-            status: 'completed',
-            consultationDetails: { $exists: true, $ne: null }
-        })
-        .sort({ appointmentDate: -1 })
-        .populate('doctorId', 'name')
-        .select('appointmentDate consultationDetails doctorId');
+        // Get both appointments and lab records
+        const [appointments, labRecords] = await Promise.all([
+            // Get completed appointments
+            Appointment.find({ 
+                patientId,
+                status: 'completed',
+                consultationDetails: { $exists: true, $ne: null }
+            })
+            .sort({ appointmentDate: -1 })
+            .populate('doctorId', 'name')
+            .select('appointmentDate consultationDetails doctorId'),
 
-        const records = appointments.map(apt => ({
-            date: apt.appointmentDate,
-            doctorName: apt.doctorId.name,
-            diagnosis: apt.consultationDetails.notes,
-            prescriptions: apt.consultationDetails.medicines,
-            suggestions: apt.consultationDetails.suggestions
-        }));
+            // Get lab records
+            patient.LabRecords
+        ]);
+
+        // Combine and format the records
+        const records = {
+            appointments: appointments.map(apt => ({
+                date: apt.appointmentDate,
+                type: 'appointment',
+                doctorName: apt.doctorId.name,
+                diagnosis: apt.consultationDetails.notes,
+                prescriptions: apt.consultationDetails.medicines,
+                suggestions: apt.consultationDetails.suggestions
+            })),
+            labRecords: labRecords.map(record => ({
+                date: record.requestedAt,
+                type: 'lab',
+                status: record.status,
+                tests: record.tests,
+                completedAt: record.completedAt
+            }))
+        };
 
         return res.status(200).json({
             success: true,

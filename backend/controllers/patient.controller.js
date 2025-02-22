@@ -228,3 +228,51 @@ export async function getPatientLabRecords(req, res) {
         });
     }
 }
+
+export async function getDoctorAccessRequests(req, res) {
+    try {
+        const patient = await Patient.findById(req.patient.id)
+            .populate('approvedDoctors.doctorId', 'name email specialties');
+        
+        return res.status(200).json({
+            success: true,
+            requests: patient.approvedDoctors
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch access requests"
+        });
+    }
+}
+
+export async function updateDoctorAccess(req, res) {
+    try {
+        const { doctorId, approved } = req.body;
+        
+        const patient = await Patient.findById(req.patient.id);
+        const requestIndex = patient.approvedDoctors.findIndex(
+            doc => doc.doctorId.toString() === doctorId
+        );
+
+        if (requestIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: "Request not found"
+            });
+        }
+
+        patient.approvedDoctors[requestIndex].approvalStatus = approved;
+        await patient.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Access ${approved ? 'granted' : 'denied'}`
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update access"
+        });
+    }
+}

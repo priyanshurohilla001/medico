@@ -1,5 +1,16 @@
 import express from 'express';
-import { registerDoctor, loginDoctor, updateDoctorProfile, changeDoctorPassword, searchDoctors, getDoctorById, getDoctorUpcomingAppointments, checkPatientAccess, requestPatientAccess, getPatientRecords } from '../controllers/doctor.controller.js';
+import { 
+    registerDoctor, 
+    loginDoctor, 
+    updateDoctorProfile, 
+    changeDoctorPassword, 
+    searchDoctors, 
+    getDoctorById, 
+    getDoctorUpcomingAppointments, 
+    checkPatientAccess, 
+    requestAccess,  // Changed from requestPatientAccess to requestAccess
+    getPatientRecords 
+} from '../controllers/doctor.controller.js';
 import authDoctor from '../services/authDoctor.js';
 
 const router = express.Router();
@@ -16,7 +27,7 @@ router.get('/:id/appointments', getDoctorUpcomingAppointments);
 router.get('/:id', getDoctorById);
 
 router.get('/check-access/:patientId', authDoctor, checkPatientAccess);
-router.post('/request-access', authDoctor, requestPatientAccess);
+router.post('/request-access', authDoctor, requestAccess); // Update the route to use the correct function name
 router.get('/patient-records/:patientId', authDoctor, getPatientRecords);
 
 export default router;

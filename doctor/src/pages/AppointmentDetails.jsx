@@ -12,24 +12,46 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { toast } from "sonner"
 
-const RecordsAccessRequest = ({ patientId, onRequest }) => {
+const RecordsAccessRequest = ({ patientId, onRequest, requestStatus }) => {
+  const [requesting, setRequesting] = useState(false)
+
+  const handleRequest = async () => {
+    try {
+      setRequesting(true)
+      await onRequest(patientId)
+      toast.success("Access request has been sent to the patient")
+    } catch (error) {
+      toast.error("Could not send access request. Please try again.")
+    } finally {
+      setRequesting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
       <ShieldAlert className="h-12 w-12 text-muted-foreground" />
       <h3 className="text-lg font-semibold">Access Required</h3>
       <p className="text-sm text-muted-foreground max-w-md">
-        You need permission to view this patient's medical records. Send a request for access.
+        {requestStatus === 'pending' 
+          ? "Your access request is pending patient approval"
+          : "You need permission to view this patient's medical records"}
       </p>
-      <Button onClick={() => onRequest(patientId)}>
-        Request Access
+      <Button 
+        onClick={handleRequest} 
+        disabled={requesting || requestStatus === 'pending'}
+      >
+        {requesting ? "Sending Request..." : 
+         requestStatus === 'pending' ? "Request Pending" : 
+         "Request Access"}
       </Button>
     </div>
   )
 }
 
-const PatientRecords = ({ patientId, hasAccess }) => {
-  const [records, setRecords] = useState([])
+const PatientRecords = ({ patientId, hasAccess, onRequest, requestStatus }) => {
+  const [records, setRecords] = useState({ appointments: [], labRecords: [] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,14 +59,14 @@ const PatientRecords = ({ patientId, hasAccess }) => {
       if (!hasAccess) return
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_SERVER_URL}/api/doctor/patient-appointments/${patientId}`,
+          `${import.meta.env.VITE_SERVER_URL}/api/doctor/patient-records/${patientId}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           }
         )
-        setRecords(response.data.appointments)
+        setRecords(response.data.data)
       } catch (error) {
         console.error('Error fetching records:', error)
       } finally {
@@ -52,11 +74,21 @@ const PatientRecords = ({ patientId, hasAccess }) => {
       }
     }
 
-    fetchRecords()
+    if (hasAccess) {
+      fetchRecords()
+    } else {
+      setLoading(false)
+    }
   }, [patientId, hasAccess])
 
   if (!hasAccess) {
-    return <RecordsAccessRequest patientId={patientId} />
+    return (
+      <RecordsAccessRequest 
+        patientId={patientId} 
+        onRequest={onRequest}
+        requestStatus={requestStatus}
+      />
+    )
   }
 
   if (loading) {
@@ -67,31 +99,63 @@ const PatientRecords = ({ patientId, hasAccess }) => {
     )
   }
 
+  // Sort all records by date
+  const allRecords = [
+    ...records.appointments.map(r => ({ ...r, date: new Date(r.date) })),
+    ...records.labRecords.map(r => ({ ...r, date: new Date(r.date) }))
+  ].sort((a, b) => b.date - a.date)
+
   return (
     <div className="space-y-4">
-      {records.map((record, index) => (
+      {allRecords.map((record, index) => (
         <Card key={index}>
           <CardHeader>
             <CardTitle className="text-base">
-              Visit on {new Date(record.date).toLocaleDateString()}
+              {record.type === 'appointment' ? (
+                <>Visit on {record.date.toLocaleDateString()}</>
+              ) : (
+                <>Lab Tests - {record.status}</>
+              )}
             </CardTitle>
-            <CardDescription>
-              Dr. {record.doctorName}
-            </CardDescription>
+            {record.type === 'appointment' && (
+              <CardDescription>Dr. {record.doctorName}</CardDescription>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p className="text-sm">{record.diagnosis}</p>
-              {record.prescriptions && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  {record.prescriptions.length} Prescriptions
+              {record.type === 'appointment' ? (
+                <>
+                  <p className="text-sm">{record.diagnosis}</p>
+                  {record.prescriptions && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4" />
+                      {record.prescriptions.length} Prescriptions
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-2">
+                  {record.tests.map((test, i) => (
+                    <div key={i} className="text-sm">
+                      <p className="font-medium">{test.testName}</p>
+                      {test.result && (
+                        <p className="text-muted-foreground">
+                          Result: {test.result}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
       ))}
+      {allRecords.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No records found
+        </div>
+      )}
     </div>
   )
 }
@@ -102,6 +166,7 @@ export default function AppointmentDetails() {
   const [appointment, setAppointment] = useState(null)
   const [loading, setLoading] = useState(true)
   const [hasAccess, setHasAccess] = useState(false)
+  const [requestStatus, setRequestStatus] = useState(null)
 
   useEffect(() => {
     const fetchAppointmentDetails = async () => {
@@ -129,9 +194,11 @@ export default function AppointmentDetails() {
               }
             )
             setHasAccess(accessRes.data.hasAccess)
+            setRequestStatus(accessRes.data.requestStatus) // 'pending', 'none', or 'granted'
           } catch (error) {
             console.error('Error checking access:', error)
             setHasAccess(false)
+            setRequestStatus('none')
           }
         }
       } catch (error) {
@@ -146,18 +213,28 @@ export default function AppointmentDetails() {
 
   const handleAccessRequest = async (patientId) => {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${import.meta.env.VITE_SERVER_URL}/api/doctor/request-access`,
-        { patientId },
+        { patientId: patientId },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
           }
         }
       )
-      alert('Access request sent successfully')
+      
+      if (response.data.success) {
+        setRequestStatus('pending')
+        toast.success("Access request sent successfully")
+        return true
+      } else {
+        throw new Error(response.data.message || "Failed to send request")
+      }
     } catch (error) {
-      alert('Failed to send access request')
+      const errorMessage = error.response?.data?.message || "Failed to send access request"
+      toast.error(errorMessage)
+      console.error('Failed to send access request:', error)
+      throw error
     }
   }
 
@@ -270,6 +347,7 @@ export default function AppointmentDetails() {
                 patientId={appointment.patientId._id} 
                 hasAccess={hasAccess}
                 onRequest={handleAccessRequest}
+                requestStatus={requestStatus}
               />
             )}
           </TabsContent>
