@@ -10,7 +10,8 @@ import DashboardPage from "./pages/DashboardPage";
 import BookAppointmentPage from "./pages/BookAppointmentPage";
 import MyAppointmentsPage from "./pages/MyAppointmentsPage";
 import ProfilePage from "./pages/ProfilePage";
-import DoctorDetailsPage from "./pages/DoctorDetailsPage"
+import DoctorDetailsPage from "./pages/DoctorDetailsPage";
+import LabRecords from "./pages/LabRecords";
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -74,6 +75,7 @@ function App() {
           <Route path="book" element={<BookAppointmentPage />} />
           <Route path="appointments" element={<MyAppointmentsPage />} />
           <Route path="doctor/:id" element={<DoctorDetailsPage />} />
+          <Route path="lab-records" element={<LabRecords />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

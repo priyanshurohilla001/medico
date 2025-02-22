@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
-import { LayoutDashboard, Calendar, User, LogOut } from "lucide-react"
+import { LayoutDashboard, Calendar, User, LogOut, BeakerIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -8,6 +8,7 @@ const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: "Profile", path: "profile" },
   { icon: Calendar, label: "Book Appointment", path: "book" },
   { icon: User, label: "My Appointments", path: "appointments" },
+  { icon: BeakerIcon, label: "Lab Records", path: "lab-records" },
 ]
 
 export default function DashboardPage() {

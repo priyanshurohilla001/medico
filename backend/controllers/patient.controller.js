@@ -101,15 +101,33 @@ export async function loginPatient(req, res) {
 
 export async function getPatientProfile(req, res) {
     try {
-        const patient = await Patient.findById(req.patient.id);
+        if (!req.patient || !req.patient.id) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required"
+            });
+        }
+
+        const patient = await Patient.findById(req.patient.id)
+            .select('-password -__v');  // Exclude sensitive fields
+
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found"
+            });
+        }
+
         return res.status(200).json({
             success: true,
             data: patient
         });
     } catch (error) {
+        console.error('Profile fetch error:', error);
         return res.status(500).json({
             success: false,
-            message: "Failed to fetch profile"
+            message: "Failed to fetch profile",
+            error: error.message
         });
     }
 }
@@ -175,6 +193,38 @@ export async function changePassword(req, res) {
         return res.status(500).json({
             success: false,
             message: "Failed to change password"
+        });
+    }
+}
+
+export async function getPatientLabRecords(req, res) {
+    try {
+        const patientId = req.patient.id;
+        
+        const labRecords = await Patient.findById(patientId)
+            .populate({
+                path: 'LabRecords',
+                populate: [
+                    {
+                        path: 'doctorId',
+                        select: 'name email'
+                    },
+                    {
+                        path: 'appointmentId'
+                    }
+                ],
+                options: { sort: { 'createdAt': -1 } }
+            });
+
+        return res.status(200).json({
+            success: true,
+            data: labRecords.LabRecords
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch lab records",
+            error: error.message
         });
     }
 }

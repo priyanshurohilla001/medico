@@ -1,71 +1,70 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Card, CardContent } from "../components/ui/card";
-import PatientProfile from "../components/PatientProfile";
-import PatientEditProfile from "../components/PatientEditProfile";
-import PatientChangePassword from "../components/PatientChangePassword";
-import { Loader2 } from "lucide-react";
+import { useState, useEffect } from "react"
+import axios from "axios"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
+import PatientProfile from "@/components/PatientProfile"
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem("token");
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchProfile = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No authentication token found')
+      }
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_SERVER_URL}/api/patient/profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      if (response.data.success && response.data.data) {
+        setProfile(response.data.data)
+        setError(null)
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || "Failed to fetch profile"
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_SERVER_URL}/api/patient/profile`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setProfile(response.data.data);
-      } catch (error) {
-        console.error("Failed to fetch profile:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [token]);
+    fetchProfile()
+  }, [])
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    );
+    )
   }
 
-  return (
-    <div className="container mx-auto py-8 max-w-3xl">
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="edit">Edit Profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="profile">
-          <Card>
-            <CardContent className="pt-6">
-              <PatientProfile profile={profile} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[400px] p-4">
+        <p className="text-destructive mb-4">{error}</p>
+        <button 
+          onClick={fetchProfile}
+          className="text-primary hover:underline"
+        >
+          Try Again
+        </button>
+      </div>
+    )
+  }
 
-        <TabsContent value="edit">
-          <PatientEditProfile 
-            profile={profile} 
-            onUpdate={(updatedProfile) => setProfile(updatedProfile)} 
-          />
-        </TabsContent>
-
-        <TabsContent value="password">
-          <PatientChangePassword />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+  return profile ? <PatientProfile profile={profile} /> : null
 }
