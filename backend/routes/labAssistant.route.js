@@ -284,4 +284,33 @@ router.post("/updateTestResults", validateTestResults, async (req, res) => {
   }
 });
 
+router.get("/completedTests", async (req, res) => {
+  try {
+    const completedTests = await LabRecord.find({ status: "completed" })
+      .populate({
+        path: "patientId",
+        select: "name email" 
+      })
+      .populate({
+        path: "doctorId",
+        select: "name email"
+      })
+      .populate("appointmentId")
+      .sort({ completedAt: -1 })
+      .exec();
+    
+    return res.json({
+      success: true,
+      message: "Completed tests found",
+      completedTests
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching completed tests",
+      error: error.message
+    });
+  }
+});
+
 export default router;
