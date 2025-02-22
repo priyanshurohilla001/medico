@@ -131,6 +131,7 @@ export default function Appointments() {
                 <TableHead>{type === 'confirmed' ? 'Patient Name' : 'Slot'}</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Time</TableHead>
+                {type === 'confirmed' && <TableHead>Type</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -146,6 +147,9 @@ export default function Appointments() {
                   </TableCell>
                   <TableCell>{formatDate(appointment.appointmentDate)}</TableCell>
                   <TableCell>{appointment.appointmentTime}</TableCell>
+                  {type === 'confirmed' && (
+                    <TableCell>{appointment.appointmentType || 'N/A'}</TableCell>
+                  )}
                   <TableCell>
                     <span className={`px-3 py-1 rounded-full text-sm ${
                       appointment.status === "confirmed"

@@ -126,7 +126,7 @@ export const updateDoctorProfile = async (req, res) => {
       updateData,
       { 
         new: true,
-        select: '-password name email specialties qualifications experience age consultationFees createdAt'
+        select: 'name email specialties qualifications experience age consultationFees createdAt'
       }
     );
 
